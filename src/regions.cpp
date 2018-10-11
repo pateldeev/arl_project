@@ -35,20 +35,16 @@ void displayRegions(const cv::Mat & img, const std::vector<cv::Rect> regions, co
 
 int main(int argc, char * argv[]) {
 
-    cv::namedWindow("Orignal_Img", cv::WINDOW_NORMAL);
-    cv::resizeWindow("Orignal_Img", 1200, 1200);
-
     // read image
     const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
     //const cv::Mat img = cv::imread("/home/dp/Downloads/NFPA_dataset/NFPA dataset/pos-175.jpg");
+    DisplayImg(img, "Orignal_Img");
 
     std::vector<cv::Rect> regions;
-
     CalculateRegionProposals(img, regions);
 
     std::cout << std::endl << "Total Number of Region Proposals: " << regions.size() << std::endl;
 
-    cv::imshow("Orignal_Img", img);
     displayRegions(img, regions);
 
     return 0;

@@ -55,10 +55,23 @@ float avgSaliency(const cv::Mat & salientImg, const cv::Rect & region) {
     for (int row = region.y; row < region.y + region.height; ++row)
         for (int col = region.x; col < region.x + region.width; ++col) {
             ++count;
-            sum += salientImg.at<uint8_t>(row,col);
+            sum += salientImg.at<uint8_t>(row, col);
         }
 
     return ((float) sum / count);
+}
+
+float numSaliency(const cv::Mat & salientImg, const cv::Rect & region) {
+    int salient = 0, total = 0;
+    const int thresh = 120;
+    for (int row = region.y; row < region.y + region.height; ++row)
+        for (int col = region.x; col < region.x + region.width; ++col) {
+            ++total;
+            if (salientImg.at<uint8_t>(row, col) > thresh)
+                ++salient;
+        }
+
+    return ((float) salient / total);
 }
 
 struct region {
@@ -81,14 +94,16 @@ void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & r
     std::multiset<region> orderedRegions;
 
     for (int i = 0; i < regions.size(); ++i) {
-        orderedRegions.insert(region(i, avgSaliency(salientImg, regions[i])));
+        orderedRegions.insert(region(i, numSaliency(salientImg, regions[i])));
     }
 
     std::multiset<region>::reverse_iterator rit = orderedRegions.rbegin();
     for (int i = 1; i <= keepNum; ++i, ++rit) {
         highest.push_back(regions[rit->m_index]);
     }
-
 }
 
+void RemoveOverlapping(const std::vector<cv::Rect> & regions, std::vector<cv::Rect> filteredRegions, float minOveralap) {
+
+}
 
