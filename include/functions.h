@@ -18,12 +18,12 @@ void CalculateSaliceny(const cv::Mat & img, cv::Mat & saliencyMat, bool useFineG
 
 void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & regions, std::vector<cv::Rect> & highest, const int keepNum = 7);
 
-void RemoveOverlapping(const cv::Mat & img, std::vector<cv::Rect> & regions, float minOveralap = 0.7);
+bool RemoveOverlapping(std::vector<cv::Rect> & regions, float minOveralap = 0.85);
 
 inline void DisplayImg(const cv::Mat & img, const std::string & windowName, int width = 1200, int height = 1200) {
-    cv::namedWindow(windowName.c_str(), cv::WINDOW_NORMAL);
-    cv::resizeWindow(windowName.c_str(), width, height);
-    cv::imshow(windowName.c_str(), img);
+    cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+    cv::resizeWindow(windowName, width, height);
+    cv::imshow(windowName, img);
 }
 
 inline void DrawBoundingBoxes(cv::Mat & img, const std::vector<cv::Rect> & regions, const cv::Scalar & color = cv::Scalar(0, 255, 0)) {
@@ -33,8 +33,8 @@ inline void DrawBoundingBoxes(cv::Mat & img, const std::vector<cv::Rect> & regio
 }
 
 inline void DisplayBoundingBoxesInteractive(const cv::Mat & img, const std::vector<cv::Rect> regions, const std::string & windowName = "Inteactive_Regions", const int increment = 50) {
-    cv::namedWindow(windowName.c_str(), cv::WINDOW_NORMAL);
-    cv::resizeWindow(windowName.c_str(), 1200, 1200);
+    cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+    cv::resizeWindow(windowName, 1200, 1200);
     int numRectsShown = increment; // number of region proposals to show
 
     while (1) {
@@ -44,9 +44,9 @@ inline void DisplayBoundingBoxesInteractive(const cv::Mat & img, const std::vect
         for (int i = 0; i < regions.size(); ++i) {
             if (i < numRectsShown)
                 cv::rectangle(dispImg, regions[i], cv::Scalar(0, 255, 0));
-            else 
+            else
                 break;
-            
+
         }
         DisplayImg(dispImg, windowName);
 

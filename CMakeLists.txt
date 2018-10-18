@@ -11,10 +11,13 @@ ADD_EXECUTABLE(regions ${PROJECT_SOURCE_DIR}/src/regions.cpp ${PROJECT_SOURCE_DI
 ADD_EXECUTABLE(saliency ${PROJECT_SOURCE_DIR}/src/saliency.cpp ${PROJECT_SOURCE_DIR}/src/functions.cpp)
 ADD_EXECUTABLE(filteredRegions ${PROJECT_SOURCE_DIR}/src/filteredRegions.cpp ${PROJECT_SOURCE_DIR}/src/functions.cpp)
 
+ADD_EXECUTABLE(testarea ${PROJECT_SOURCE_DIR}/src/test.cpp ${PROJECT_SOURCE_DIR}/src/functions.cpp)
 ADD_EXECUTABLE(contours ${PROJECT_SOURCE_DIR}/src/contours.cpp)
 
 TARGET_LINK_LIBRARIES(regions ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(saliency ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(filteredRegions ${OpenCV_LIBS})
+
+TARGET_LINK_LIBRARIES(testarea ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(contours ${OpenCV_LIBS})
 

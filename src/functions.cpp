@@ -1,7 +1,6 @@
 #include "functions.h"
 
 #include <set>
-
 #include <iostream>
 
 void RegionProposalsGraph(const cv::Mat & img, std::vector<cv::Rect> & regions) {
@@ -99,7 +98,7 @@ void RegionProposalsContour(const cv::Mat & img, std::vector<cv::Rect> & regions
     cv::threshold(img_gray, thresh_output, thresh, 255, cv::THRESH_BINARY);
     cv::findContours(thresh_output, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
 
-    std::vector<std::vector<cv::Point>> contours_poly(contours.size());
+    std::vector<std::vector < cv::Point >> contours_poly(contours.size());
     regions.resize(contours.size());
 
     for (size_t i = 0; i < contours.size(); ++i) {
@@ -172,65 +171,25 @@ void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & r
     }
 }
 
-void RemoveOverlapping(const cv::Mat & img, std::vector<cv::Rect> & regions, float minOverlap) {
-    int numCombined = 1;
+bool RemoveOverlapping(std::vector<cv::Rect> & regions, float minOverlap) {
+    int size = regions.size();
     cv::Rect overlap;
-    std::vector<bool> removeRegion(regions.size(), false);
-    std::vector<cv::Rect> combinedRegions;
-
-    cv::Mat dispImg = img.clone();
-    cv::rectangle(dispImg, regions[0], cv::Scalar(0, 255, 0));
-    cv::rectangle(dispImg, regions[1], cv::Scalar(0, 255, 0));
-    DisplayImg(dispImg, "asdf");
-    while (cv::waitKey(0) != 'c');
-
-    while (numCombined) {
-        numCombined = 0;
-
-        std::cout << std::endl << regions.size() << std::endl;
-
-        for (int i = 0; i < regions.size(); ++i) {
-            for (int j = i + 1; j < regions.size(); ++j) {
-                if (!removeRegion[j]) {
-                    overlap = regions[i] & regions[j];
-
-                    if (overlap.area() >= minOverlap * std::min(regions[i].area(), regions[j].area())) {
-                        std::cout << std::endl << "HERE : " << overlap.area() << std::endl;
-
-                        dispImg = img.clone();
-                        cv::rectangle(dispImg, regions[i], cv::Scalar(0, 255, 0));
-                        cv::rectangle(dispImg, regions[j], cv::Scalar(0, 255, 0));
-                        cv::rectangle(dispImg, (regions[i] | regions[j]), cv::Scalar(0, 0, 255));
-                        DisplayImg(dispImg, "asdf2");
-
-                        while (cv::waitKey(0) != 'c');
-
-                        removeRegion[i] = true;
-                        removeRegion[j] = true;
-                        regions.push_back((regions[i] | regions[j]));
-                        removeRegion.push_back(false);
-                        j = regions.size();
-                        ++numCombined;
-                    }
-                    std::cout << std::endl << i << "|" << j << "-" << regions.size() << std::endl;
-                    while (cv::waitKey(0) != 'c');
-
+    for (int i = 0; i < size; ++i) {
+        for (int j = i + 1; j < size; ++j) {
+            if (!regions[i].empty() && !regions[j].empty()) {
+                overlap = regions[i] & regions[j];
+                if (overlap.area() >= minOverlap * std::min(regions[i].area(), regions[j].area())) {
+                    regions.push_back(regions[i] | regions[j]);
+                    regions[i] = cv::Rect();
+                    regions[j] = cv::Rect();
                 }
-            }
+            } 
         }
-
-        assert(removeRegion.size() == regions.size());
-
-        for (int i = 0; i < removeRegion.size(); ++i) {
-            if (!removeRegion[i]) {
-                combinedRegions.push_back(regions[i]);
-            }
-        }
-
-        regions = combinedRegions;
-        combinedRegions.clear();
-        std::cout << std::endl << "|" << numCombined << "|" << regions.size() << std::endl;
     }
+
+    regions.erase(std::remove_if(regions.begin(), regions.end(),
+            [](const cv::Rect & rect) {
+                return rect.empty(); }), regions.end());
 }
 
 #if 0
