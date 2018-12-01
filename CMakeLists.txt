@@ -14,10 +14,14 @@ ADD_EXECUTABLE(filteredRegions ${PROJECT_SOURCE_DIR}/src/filteredRegions.cpp ${P
 ADD_EXECUTABLE(testarea ${PROJECT_SOURCE_DIR}/src/test.cpp ${PROJECT_SOURCE_DIR}/src/functions.cpp)
 ADD_EXECUTABLE(contours ${PROJECT_SOURCE_DIR}/src/contours.cpp)
 
+ADD_EXECUTABLE(yoloVisualization ${PROJECT_SOURCE_DIR}/src/yoloExtractor/main.cpp)
+
 TARGET_LINK_LIBRARIES(regions ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(saliency ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(filteredRegions ${OpenCV_LIBS})
 
 TARGET_LINK_LIBRARIES(testarea ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(contours ${OpenCV_LIBS})
+
+TARGET_LINK_LIBRARIES(yoloVisualization ${OpenCV_LIBS})
 

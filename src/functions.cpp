@@ -157,7 +157,7 @@ struct region {
 void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & regions, std::vector<cv::Rect> & highest, const int keepNum) {
     assert(regions.size() >= keepNum);
     assert(salientImg.type() == CV_8UC1);
-    highest.clear();
+    highest.resize(keepNum);
 
     std::multiset<region> orderedRegions;
 
@@ -166,30 +166,32 @@ void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & r
     }
 
     std::multiset<region>::reverse_iterator rit = orderedRegions.rbegin();
-    for (int i = 1; i <= keepNum; ++i, ++rit) {
-        highest.push_back(regions[rit->m_index]);
+    for (int i = 0; i < keepNum; ++i, ++rit) {
+        highest[i] = regions[rit->m_index];
     }
 }
 
 bool RemoveOverlapping(std::vector<cv::Rect> & regions, float minOverlap) {
-    int size = regions.size();
+    unsigned int size = regions.size();
     cv::Rect overlap;
-    for (int i = 0; i < size; ++i) {
-        for (int j = i + 1; j < size; ++j) {
+    for (unsigned int i = 0; i < size; ++i) {
+        for (unsigned int j = i + 1; j < size; ++j) {
             if (!regions[i].empty() && !regions[j].empty()) {
                 overlap = regions[i] & regions[j];
-                if (overlap.area() >= minOverlap * std::min(regions[i].area(), regions[j].area())) {
+                if (overlap.area() >= minOverlap * std::max(regions[i].area(), regions[j].area())) {
                     regions.push_back(regions[i] | regions[j]);
-                    regions[i] = cv::Rect();
-                    regions[j] = cv::Rect();
+                    regions[i] = regions[j] = cv::Rect();
                 }
-            } 
+            }
         }
     }
 
+    size = regions.size();
     regions.erase(std::remove_if(regions.begin(), regions.end(),
             [](const cv::Rect & rect) {
                 return rect.empty(); }), regions.end());
+
+    return !(size == regions.size());
 }
 
 #if 0

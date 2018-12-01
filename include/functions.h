@@ -27,9 +27,8 @@ inline void DisplayImg(const cv::Mat & img, const std::string & windowName, int 
 }
 
 inline void DrawBoundingBoxes(cv::Mat & img, const std::vector<cv::Rect> & regions, const cv::Scalar & color = cv::Scalar(0, 255, 0)) {
-    for (const cv::Rect & rect : regions) {
+    for (const cv::Rect & rect : regions)
         cv::rectangle(img, rect, color);
-    }
 }
 
 inline void DisplayBoundingBoxesInteractive(const cv::Mat & img, const std::vector<cv::Rect> regions, const std::string & windowName = "Inteactive_Regions", const int increment = 50) {
@@ -58,6 +57,18 @@ inline void DisplayBoundingBoxesInteractive(const cv::Mat & img, const std::vect
         else if (k == 'c')
             return;
     }
+}
+
+inline void viewMostCommonCommon(const std::vector<cv::Rect> & regions, cv::Mat & output) {
+    assert(output.type() == CV_16UC1);
+    cv::Mat tempSubMat;
+    for (const cv::Rect & tempRegion : regions) {
+        tempSubMat = output(tempRegion);
+        tempSubMat.forEach<uint16_t>([](uint16_t & val, const int *) -> void {
+            ++val;
+        });
+    }
+    cv::normalize(output, output, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 }
 
 #endif

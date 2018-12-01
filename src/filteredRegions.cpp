@@ -29,20 +29,16 @@ int main(int argc, char * argv[]) {
     std::cout << std::endl << keptRegions.size() << std::endl;
 
     cv::Mat dispImg = img.clone();
-    for (const cv::Rect & rect : keptRegions) {
-        cv::rectangle(dispImg, rect, cv::Scalar(0, 255, 0));
-    }
+    DrawBoundingBoxes(dispImg, keptRegions);
 
     DisplayImg(dispImg, "Salient_Regions");
-
+    
     cv::groupRectangles(keptRegions, 1, 0.25);
 
     std::cout << std::endl << keptRegions.size() << std::endl;
 
     dispImg = img.clone();
-    for (const cv::Rect & rect : keptRegions) {
-        cv::rectangle(dispImg, rect, cv::Scalar(0, 255, 0));
-    }
+    DrawBoundingBoxes(dispImg, keptRegions);
     DisplayImg(dispImg, "Filtered_Regions");
 
 #if 0
@@ -53,7 +49,7 @@ int main(int argc, char * argv[]) {
     }
     DisplayImg(dispImg, "Test");
 #endif
-    
+
     std::cout << std::endl << "DONE: PRESS q" << std::endl;
 
     while (cv::waitKey(0) != 'q');
