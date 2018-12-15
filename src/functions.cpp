@@ -2,6 +2,7 @@
 
 #include <set>
 #include <iostream>
+#include <chrono>
 
 void RegionProposalsGraph(const cv::Mat & img, std::vector<cv::Rect> & regions) {
     regions.clear();
@@ -60,8 +61,8 @@ void RegionProposalsSelectiveSearch(const cv::Mat & img, std::vector<cv::Rect> &
     cv::resize(img, imgResized, cv::Size(resizeWidth, resizeHeight));
 
     // speed-up using multithreads
-    cv::setUseOptimized(true);
-    cv::setNumThreads(4);
+    //cv::setUseOptimized(true);
+    //cv::setNumThreads(8);
 
     // create Selective Search Segmentation Object using default parameters
     cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentation> ss = cv::ximgproc::segmentation::createSelectiveSearchSegmentation();
@@ -70,9 +71,16 @@ void RegionProposalsSelectiveSearch(const cv::Mat & img, std::vector<cv::Rect> &
 
     ss->switchToSelectiveSearchQuality(); // change to high quality
 
-    // run selective search segmentation on input image
+    //run selective search segmentation on input image
     std::vector<cv::Rect> regionsResized;
+
+    std::chrono::high_resolution_clock::time_point t1, t2;
+    t1 = std::chrono::high_resolution_clock::now();
+
     ss->process(regionsResized);
+
+    t2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
     // rescale rectangles back for original image
     for (const cv::Rect & rec : regionsResized) {
@@ -83,6 +91,8 @@ void RegionProposalsSelectiveSearch(const cv::Mat & img, std::vector<cv::Rect> &
 
         regions.push_back(cv::Rect(x, y, width, height));
     }
+
+    std::cout << std::endl << "Region Proposals - Selective Search Segmentation: " << regions.size() << std::endl << "Time: " << duration;
 }
 
 void RegionProposalsContour(const cv::Mat & img, std::vector<cv::Rect> & regions, const float thresh) {

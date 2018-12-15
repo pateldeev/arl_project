@@ -20,15 +20,46 @@ void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & r
 
 bool RemoveOverlapping(std::vector<cv::Rect> & regions, float minOveralap = 0.85);
 
-inline void DisplayImg(const cv::Mat & img, const std::string & windowName, int width = 1200, int height = 1200) {
+inline char DisplayImg(const cv::Mat & img, const std::string & windowName, int width = 1200, int height = 1200, bool wait = false) {
     cv::namedWindow(windowName, cv::WINDOW_NORMAL);
     cv::resizeWindow(windowName, width, height);
     cv::imshow(windowName, img);
+    return (wait) ? cv::waitKey() : 0;
 }
+
+inline char UpdateImg(const cv::Mat & img, const std::string & windowName, const std::string & windowTitle = "", bool wait = false) {
+    cv::imshow(windowName, img);
+    if (*windowTitle.c_str())
+        cv::setWindowTitle(windowName, windowTitle);
+    return (wait) ? cv::waitKey() : 0;
+}
+
+//draw single bounding box
+
+inline void DrawBoundingBox(cv::Mat & img, const cv::Rect & rect, const cv::Scalar & color = cv::Scalar(0, 0, 0), bool showCenter = true) {
+    cv::rectangle(img, rect, color);
+    if (showCenter)
+        cv::drawMarker(img, (rect.tl() + rect.br()) / 2, color);
+}
+
+
+//draw multiple bounding boxes
 
 inline void DrawBoundingBoxes(cv::Mat & img, const std::vector<cv::Rect> & regions, const cv::Scalar & color = cv::Scalar(0, 255, 0)) {
     for (const cv::Rect & rect : regions)
         cv::rectangle(img, rect, color);
+}
+
+//make sure grid lines fit evenly for optimal behavior
+
+inline void DrawGridLines(cv::Mat & img, int numGrids, const cv::Scalar gridColor = cv::Scalar(255, 255, 255)) {
+    const int gridSizeR = img.rows / numGrids;
+    const int gridSizeC = img.cols / numGrids;
+
+    for (int r = 0; r < img.rows; r += gridSizeR)
+        cv::line(img, cv::Point(r, 0), cv::Point(r, img.cols), gridColor);
+    for (int c = 0; c < img.cols; c += gridSizeC)
+        cv::line(img, cv::Point(0, c), cv::Point(img.rows, c), gridColor);
 }
 
 inline void DisplayBoundingBoxesInteractive(const cv::Mat & img, const std::vector<cv::Rect> regions, const std::string & windowName = "Inteactive_Regions", const int increment = 50) {

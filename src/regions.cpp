@@ -26,14 +26,15 @@ void selectiveSegmentation(const cv::Mat & img) {
     std::vector<cv::Rect> regions;
     RegionProposalsSelectiveSearch(img, regions);
 
-    std::cout << std::endl << "Region Proposals - Selective Search Segmentation: " << regions.size() << std::endl;
+    DisplayBoundingBoxesInteractive(img, regions, "All_Regions");
+    return;
 
     std::vector<cv::Rect> filteredRegions(regions);
     //cv::groupRectangles(filteredRegions, 1);
     while (RemoveOverlapping(filteredRegions, 0.7));
     std::cout << std::endl << "Regions After filter: " << filteredRegions.size() << std::endl;
 
-#if 1
+#if 0
     cv::Mat mostCommon(img.rows, img.cols, CV_16UC1, cv::Scalar(0));
     viewMostCommonCommon(regions, mostCommon);
     DisplayImg(mostCommon, "Most common");
@@ -68,19 +69,19 @@ void selectiveSegmentation(const cv::Mat & img) {
     RemoveUnsalient(salImg, regions, keptRegions, regions.size() / 10);
     std::cout << std::endl << "Salient Kept: " << keptRegions.size() << std::endl;
     cv::Mat dispImg = img.clone();
-    DrawBoundingBoxes(dispImg, keptRegions);
-    DisplayImg(dispImg, "Salient_Regions");
+    //DrawBoundingBoxes(dispImg, keptRegions);
+    //DisplayImg(dispImg, "Salient_Regions");
 
     cv::groupRectangles(keptRegions, 1, 0.25);
     std::cout << std::endl << keptRegions.size() << std::endl;
     dispImg = img.clone();
-    DrawBoundingBoxes(dispImg, keptRegions);
-    DisplayImg(dispImg, "Filtered_Regions");
+    //DrawBoundingBoxes(dispImg, keptRegions);
+    //DisplayImg(dispImg, "Filtered_Regions");
 
 #endif
 
-    //DisplayBoundingBoxesInteractive(img, filteredRegions, "Filtered_Regions");
-    //DisplayBoundingBoxesInteractive(img, regions, "All_Regions");
+    DisplayBoundingBoxesInteractive(img, filteredRegions, "Filtered_Regions");
+    DisplayBoundingBoxesInteractive(img, regions, "All_Regions");
 }
 
 void contourSegmentation(const cv::Mat & img) {
@@ -100,14 +101,15 @@ void contourSegmentation(const cv::Mat & img) {
 }
 
 int main(int argc, char * argv[]) {
-    const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
+    //const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
     //const cv::Mat img = cv::imread("/home/dp/Desktop/YOLO/darknet/data/dog.jpg");
+    const cv::Mat img = cv::imread("/home/dp/Desktop/ARL/darknet-master/networkInput.jpg");
 
     //graphSegmentation(img);
     selectiveSegmentation(img);
     //contourSegmentation(img);
 
-    while (cv::waitKey() != 'q');
+    cv::waitKey();
 
     return 0;
 }
