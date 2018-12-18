@@ -21,4 +21,7 @@ make
 * ./filteredRegions
   * For testing out region filtration methodology
 * ./testarea
-  * For testing experimental stuff
+  * For testing experimental stuff - currently tests my own implimentation of [selective segmentation](https://www.robots.ox.ac.uk/~vgg/rg/papers/sande_iccv11.pdf)
+* ./yoloVisualization
+  * For visualializing the results of created by [YOLOv3](https://github.com/pateldeev/editedYOLOv3)
+
