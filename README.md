@@ -15,7 +15,7 @@ make
 * ./regions 
   * For viewing the different region proposal methods
 * ./saliency
-  * For view saliency methods
+  * For viewing saliency model outputs
 * ./contours
   * For viewing OpenCV contour seqmentation algorithm
 * ./filteredRegions
