@@ -7,7 +7,17 @@
 
 #include <opencv2/ximgproc/segmentation.hpp>
 
+#define DEBUG_SEGMENTATION
+
 namespace Segmentation {
+
+    extern std::vector<cv::Mat> m_images;
+    extern std::vector<cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> > m_segmentations;
+    extern std::vector<cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentationStrategy> > m_strategies;
+
+#ifdef DEBUG_SEGMENTATION
+    extern std::vector<cv::Mat> debugDisp1, debugDisp2;
+#endif
 
     void process(const cv::Mat & img, std::vector<cv::Rect> & rects, int base_k = 150, int inc_k = 150, float sigma = 0.8);
 

@@ -7,8 +7,13 @@
 void graphSegmentation(const cv::Mat & img) {
     DisplayImg(img, "Orignal_Img");
 
+    cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> ss = cv::ximgproc::segmentation::createGraphSegmentation();
+    cv::Mat output;
+    ss->processImage(img, output);
+    DisplayImg(GetGraphSegmentationViewable(output), "Segmentation_Graph");
+
     std::vector<cv::Rect> regions;
-    RegionProposalsGraph(img, regions);
+    RegionProposalsGraph(output, regions);
 
     std::cout << std::endl << "Region Proposals - Graph Segmentation: " << regions.size() << std::endl;
 
@@ -31,7 +36,7 @@ void selectiveSegmentation(const cv::Mat & img) {
 
     std::vector<cv::Rect> filteredRegions(regions);
     //cv::groupRectangles(filteredRegions, 1);
-    while (RemoveOverlapping(filteredRegions, 0.7));
+    RemoveOverlapping(filteredRegions, 0.7);
     std::cout << std::endl << "Regions After filter: " << filteredRegions.size() << std::endl;
 
 #if 0
@@ -105,8 +110,8 @@ int main(int argc, char * argv[]) {
     //const cv::Mat img = cv::imread("/home/dp/Desktop/YOLO/darknet/data/dog.jpg");
     const cv::Mat img = cv::imread("/home/dp/Desktop/ARL/darknet-master/networkInput.jpg");
 
-    //graphSegmentation(img);
-    selectiveSegmentation(img);
+    graphSegmentation(img);
+    //selectiveSegmentation(img);
     //contourSegmentation(img);
 
     cv::waitKey();

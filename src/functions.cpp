@@ -4,24 +4,18 @@
 #include <iostream>
 #include <chrono>
 
-void RegionProposalsGraph(const cv::Mat & img, std::vector<cv::Rect> & regions) {
+void RegionProposalsGraph(const cv::Mat & segmentedImg, std::vector<cv::Rect> & regions) {
     regions.clear();
 
-    cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> ss = cv::ximgproc::segmentation::createGraphSegmentation();
-    cv::Mat output;
-    ss->processImage(img, output);
-
     double min, max;
-    cv::minMaxLoc(output, &min, &max);
-    int numSegments = (int) max + 1;
+    cv::minMaxLoc(segmentedImg, &min, &max);
+    regions.resize(int(max) + 1);
 
-    regions.resize(numSegments);
+    for (int r = 0; r < segmentedImg.rows; ++r) {
+        for (int c = 0; c < segmentedImg.cols; ++c) {
+            uint32_t segment = segmentedImg.at<uint32_t>(r, c);
 
-    for (int r = 0; r < output.rows; r++) {
-        for (int c = 0; c < output.cols; c++) {
-            uint segment = output.at<uint>(r, c);
             if (!regions[segment].contains(cv::Point(r, c))) {
-
                 if (regions[segment].tl() == regions[segment].br() && regions[segment].tl().x == 0 && regions[segment].tl().y == 0) {
                     regions[segment] = cv::Rect(cv::Point(c, r), cv::Point(c, r));
                 } else {
@@ -84,6 +78,7 @@ void RegionProposalsSelectiveSearch(const cv::Mat & img, std::vector<cv::Rect> &
 
     // rescale rectangles back for original image
     for (const cv::Rect & rec : regionsResized) {
+
         int x = oldWidth * ((double) rec.x / resizeWidth);
         int y = oldHeight * ((double) rec.y / resizeHeight);
         int width = ((double) rec.width / resizeWidth) * oldWidth;
@@ -112,6 +107,7 @@ void RegionProposalsContour(const cv::Mat & img, std::vector<cv::Rect> & regions
     regions.resize(contours.size());
 
     for (size_t i = 0; i < contours.size(); ++i) {
+
         cv::approxPolyDP(cv::Mat(contours[i]), contours_poly[i], 3, true);
         regions[i] = cv::boundingRect(cv::Mat(contours_poly[i]));
     }
@@ -122,6 +118,7 @@ void CalculateSaliceny(const cv::Mat & img, cv::Mat & saliencyMat, bool useFineG
         cv::Ptr<cv::saliency::StaticSaliencyFineGrained> saliency = cv::saliency::StaticSaliencyFineGrained::create();
         saliency->computeSaliency(img, saliencyMat);
     } else {
+
         cv::Ptr<cv::saliency::StaticSaliencySpectralResidual> saliency = cv::saliency::StaticSaliencySpectralResidual::create();
         saliency->computeSaliency(img, saliencyMat);
         cv::normalize(saliencyMat, saliencyMat, 0, 255, cv::NORM_MINMAX, CV_8UC1);
@@ -132,6 +129,7 @@ float avgSaliency(const cv::Mat & salientImg, const cv::Rect & region) {
     int sum = 0, count = 0;
     for (int row = region.y; row < region.y + region.height; ++row)
         for (int col = region.x; col < region.x + region.width; ++col) {
+
             ++count;
             sum += salientImg.at<uint8_t>(row, col);
         }
@@ -145,6 +143,7 @@ float numSaliency(const cv::Mat & salientImg, const cv::Rect & region) {
     for (int row = region.y; row < region.y + region.height; ++row)
         for (int col = region.x; col < region.x + region.width; ++col) {
             ++total;
+
             if (salientImg.at<uint8_t>(row, col) > thresh)
                 ++salient;
         }
@@ -160,13 +159,14 @@ struct region {
     }
 
     bool operator<(const region & other) const {
+
         return m_data < other.m_data;
     }
 };
 
 void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & regions, std::vector<cv::Rect> & highest, const int keepNum) {
-    assert(regions.size() >= keepNum);
-    assert(salientImg.type() == CV_8UC1);
+    CV_Assert(regions.size() >= keepNum);
+    CV_Assert(salientImg.type() == CV_8UC1);
     highest.resize(keepNum);
 
     std::multiset<region> orderedRegions;
@@ -177,18 +177,19 @@ void RemoveUnsalient(const cv::Mat & salientImg, const std::vector<cv::Rect> & r
 
     std::multiset<region>::reverse_iterator rit = orderedRegions.rbegin();
     for (int i = 0; i < keepNum; ++i, ++rit) {
+
         highest[i] = regions[rit->m_index];
     }
 }
 
-bool RemoveOverlapping(std::vector<cv::Rect> & regions, float minOverlap) {
+void RemoveOverlapping(std::vector<cv::Rect> & regions, float minOverlap) {
     unsigned int size = regions.size();
     cv::Rect overlap;
     for (unsigned int i = 0; i < size; ++i) {
         for (unsigned int j = i + 1; j < size; ++j) {
             if (!regions[i].empty() && !regions[j].empty()) {
                 overlap = regions[i] & regions[j];
-                if (overlap.area() >= minOverlap * std::max(regions[i].area(), regions[j].area())) {
+                if (overlap.area() >= minOverlap * regions[i].area() && overlap.area() >= minOverlap * regions[j].area()) {
                     regions.push_back(regions[i] | regions[j]);
                     regions[i] = regions[j] = cv::Rect();
                 }
@@ -198,10 +199,28 @@ bool RemoveOverlapping(std::vector<cv::Rect> & regions, float minOverlap) {
 
     size = regions.size();
     regions.erase(std::remove_if(regions.begin(), regions.end(),
-            [](const cv::Rect & rect) {
+            [](const cv::Rect & rect)->bool {
                 return rect.empty(); }), regions.end());
 
-    return !(size == regions.size());
+    if (size != regions.size())
+        RemoveOverlapping(regions, minOverlap);
+}
+
+
+// Counts number of regions that contain each pixel value
+// heatMap should be a CV_16UC1 image of all zeros of the correct size 
+
+void CreateHeatMap(const std::vector<cv::Rect> & regions, cv::Mat & heatMap) {
+    CV_Assert(heatMap.type() == CV_16UC1);
+
+    for (const cv::Rect & r : regions) {
+        for (int y = r.tl().y; y < r.br().y; ++y) {
+            for (int x = r.tl().x; x < r.br().x; ++x) {
+                ++heatMap.at<uint16_t>(y, x);
+
+            }
+        }
+    }
 }
 
 #if 0

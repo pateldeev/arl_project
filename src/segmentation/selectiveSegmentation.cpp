@@ -1,4 +1,5 @@
 #include "selectiveSegmentation.h"
+#include "functions.h"
 
 #include <iostream>
 #include <map>
@@ -6,16 +7,21 @@
 
 namespace Segmentation {
 
-    //helper functions
     std::vector<cv::Mat> m_images;
     std::vector<cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> > m_segmentations;
     std::vector<cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentationStrategy> > m_strategies;
 
+#ifdef DEBUG_SEGMENTATION
+    std::vector<cv::Mat> debugDisp1, debugDisp2;
+#endif
+
+    //helper functions
+
     void switchToSelectiveSearchQuality(const cv::Mat & base_image, const int base_k, const int inc_k, const float sigma) {
         m_images.clear();
-        m_images.reserve(5);
         m_segmentations.clear();
         m_strategies.clear();
+        m_images.reserve(5);
 
         cv::Mat hsv;
         cv::cvtColor(base_image, hsv, cv::COLOR_BGR2HSV);
@@ -40,6 +46,7 @@ namespace Segmentation {
         cv::merge(channel2, rgI);
         m_images.push_back(rgI);
 
+
         for (int k = base_k; k <= base_k + inc_k * 4; k += inc_k)
             m_segmentations.emplace_back(cv::ximgproc::segmentation::createGraphSegmentation(sigma, float(k)));
 
@@ -59,26 +66,23 @@ namespace Segmentation {
         m_strategies.emplace_back(cv::ximgproc::segmentation::createSelectiveSearchSegmentationStrategySize()); //size3
     }
 
-    void hierarchicalGrouping(const cv::Mat& img, cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentationStrategy>& s, const cv::Mat& img_regions, const cv::Mat_<uint8_t>& is_neighbor, const cv::Mat_<int32_t>& sizes_, const std::vector<cv::Rect>& bounding_rects, std::vector<Region>& regions, int image_id) {
+    void hierarchicalGrouping(const cv::Mat & img, cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentationStrategy> & s, const cv::Mat & img_regions, const cv::Mat_<uint8_t> & is_neighbor, const cv::Mat_<int32_t> & sizes_, const std::vector<cv::Rect> & bounding_rects, std::vector<Region> & regions, int image_id) {
         cv::Mat sizes = sizes_.clone();
-
         std::vector<Neighbor> similarities;
-
         regions.clear();
 
         /////////////////////////////////////////
-
         s->setImage(img, img_regions, sizes, image_id);
 
         // Compute initial similarities
         regions.resize(bounding_rects.size());
-        for (int i = 0; i < bounding_rects.size(); ++i) {
+        for (unsigned int i = 0; i < bounding_rects.size(); ++i) {
             regions[i].id = i;
             regions[i].level = 1;
             regions[i].merged_to = -1;
             regions[i].bounding_box = bounding_rects[i];
 
-            for (int j = i + 1; j < bounding_rects.size(); ++j) {
+            for (unsigned int j = i + 1; j < bounding_rects.size(); ++j) {
                 if (is_neighbor.at<uint8_t>(i, j)) {
                     Neighbor n;
                     n.from = i;
@@ -90,8 +94,7 @@ namespace Segmentation {
             }
         }
 
-        while (similarities.size() > 0) {
-
+        while (similarities.size() != 0) {
             std::sort(similarities.begin(), similarities.end());
 
             //for (const Neighbor & s : similarities) std::cout << s << std::endl;
@@ -99,8 +102,7 @@ namespace Segmentation {
             Neighbor p = similarities.back();
             similarities.pop_back();
 
-            Region region_from = regions[p.from];
-            Region region_to = regions[p.to];
+            Region region_from = regions[p.from], region_to = regions[p.to];
 
             Region new_r;
             new_r.id = std::min(region_from.id, region_to.id); // Should be the smallest, working ID
@@ -110,8 +112,7 @@ namespace Segmentation {
 
             regions.push_back(new_r);
 
-            regions[p.from].merged_to = regions.size() - 1;
-            regions[p.to].merged_to = regions.size() - 1;
+            regions[p.from].merged_to = regions[p.to].merged_to = regions.size() - 1;
 
             // Merge
             s->merge(region_from.id, region_to.id);
@@ -129,7 +130,6 @@ namespace Segmentation {
                     from = (similarity->from == p.from || similarity->from == p.to) ? similarity->to : similarity->from;
 
                     bool already_neighbor = false;
-
                     for (const int32_t & local_neighbor : local_neighbors) {
                         if (local_neighbor == from) {
                             already_neighbor = true;
@@ -147,7 +147,6 @@ namespace Segmentation {
             }
 
             for (const int32_t & local_neighbor : local_neighbors) {
-
                 Neighbor n;
                 n.from = regions.size() - 1;
                 n.to = local_neighbor;
@@ -159,7 +158,7 @@ namespace Segmentation {
 
         // Compute region's rank
         for (Region & r : regions)
-            r.rank = (double(std::rand()) / (RAND_MAX)) * (r.level); // Note: this is inverted from the paper, but we keep the lower region first so it's works
+            r.rank = (double(std::rand()) / RAND_MAX) * r.level; // Note: this is inverted from the paper, but we keep the lower region first so it's works
     }
 
     void process(const cv::Mat & img, std::vector<cv::Rect> & rects, int base_k, int inc_k, float sigma) {
@@ -171,8 +170,13 @@ namespace Segmentation {
 
         int image_id = 0;
 
+#ifdef DEBUG_SEGMENTATION
+        std::cout << std::endl << m_images.size() << "," << m_segmentations.size() << std::endl;
+        ShowManyImages("m_images", m_images, 2, 3);
+#endif
+
         for (std::vector<cv::Mat>::const_iterator image = m_images.begin(); image != m_images.end(); ++image) {
-            for (std::vector<cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> >::iterator gs = m_segmentations.begin(); gs != m_segmentations.end(); ++gs) {
+            for (std::vector< cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> >::iterator gs = m_segmentations.begin(); gs != m_segmentations.end(); ++gs) {
 
                 // Compute initial segmentation
                 cv::Mat img_regions;
@@ -181,34 +185,27 @@ namespace Segmentation {
                 // Get number of regions
                 double min, max;
                 cv::minMaxLoc(img_regions, &min, &max);
-                const int nb_segs = (int) max + 1;
+                const int nb_segs = int(max) + 1;
 
                 // Compute bounding rectangles and neighbors
                 std::vector<cv::Rect> bounding_rects(nb_segs);
-                std::vector<std::vector<cv::Point> > points(nb_segs);
+                std::vector< std::vector<cv::Point> > points(nb_segs);
 
                 cv::Mat_<uint8_t> is_neighbor(cv::Mat::zeros(nb_segs, nb_segs, CV_8UC1));
                 cv::Mat_<int32_t> sizes(cv::Mat::zeros(nb_segs, 1, CV_32SC1));
 
-                const int * previous_p = nullptr, * p = nullptr;
-
+                const int * previous_p, * p;
                 for (int i = 0; i < img_regions.rows; ++i) {
                     p = img_regions.ptr<int32_t>(i);
 
                     for (int j = 0; j < img_regions.cols; ++j) {
-
                         points[p[j]].push_back(cv::Point(j, i));
                         ++sizes.at<int32_t>(p[j], 0);
 
-                        if (i > 0 && j > 0) {
+                        if (i != 0 && j != 0) {
+                            is_neighbor.at<uint8_t>(p[j], p[j - 1]) = is_neighbor.at<uint8_t>(p[j], previous_p[j]) = is_neighbor.at<uint8_t>(p[j], previous_p[j - 1]) = 1;
 
-                            is_neighbor.at<uint8_t>(p[j], p[j - 1]) = 1;
-                            is_neighbor.at<uint8_t>(p[j], previous_p[j]) = 1;
-                            is_neighbor.at<uint8_t>(p[j], previous_p[j - 1]) = 1;
-
-                            is_neighbor.at<uint8_t>(p[j - 1], p[j]) = 1;
-                            is_neighbor.at<uint8_t>(previous_p[j], p[j]) = 1;
-                            is_neighbor.at<uint8_t>(previous_p[j - 1], p[j]) = 1;
+                            is_neighbor.at<uint8_t>(p[j - 1], p[j]) = is_neighbor.at<uint8_t>(previous_p[j], p[j]) = is_neighbor.at<uint8_t>(previous_p[j - 1], p[j]) = 1;
                         }
                     }
                     previous_p = p;
@@ -217,19 +214,27 @@ namespace Segmentation {
                 for (int seg = 0; seg < nb_segs; ++seg)
                     bounding_rects[seg] = cv::boundingRect(points[seg]);
 
-                for (std::vector<cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentationStrategy> >::iterator strategy = m_strategies.begin(); strategy != m_strategies.end(); ++strategy) {
+#ifdef DEBUG_SEGMENTATION
+                debugDisp1.push_back(img_regions.clone());
+                debugDisp2.push_back(image->clone());
+                for (const cv::Rect & r : bounding_rects)
+                    cv::rectangle(debugDisp2.back(), r, cv::Scalar(0, 255, 0));
+#endif
+
+                for (cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentationStrategy> strategy : m_strategies) {
                     std::vector<Region> regions;
-                    hierarchicalGrouping(*image, *strategy, img_regions, is_neighbor, sizes, bounding_rects, regions, image_id);
+                    hierarchicalGrouping(*image, strategy, img_regions, is_neighbor, sizes, bounding_rects, regions, image_id);
 
                     all_regions.insert(all_regions.end(), regions.begin(), regions.end());
                 }
+
                 ++image_id;
             }
         }
 
         std::sort(all_regions.begin(), all_regions.end());
 
-        std::map < cv::Rect, bool, rectComparator> processed_rect;
+        std::map < cv::Rect, bool, rectComparator > processed_rect;
 
         // Remove duplicate in rectangle list
         for (const Region & r : all_regions) {
