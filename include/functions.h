@@ -31,6 +31,10 @@ inline char DisplayImg(const cv::Mat &img, const std::string &windowName, int wi
     return (wait) ? cv::waitKey() : 0;
 }
 
+inline char DisplayImg(const std::string &windowName, const cv::Mat &img, int width = 1200, int height = 1200, bool wait = false) {
+    return DisplayImg(img, windowName, width, height, wait);
+}
+
 inline char UpdateImg(const cv::Mat &img, const std::string &windowName, const std::string &windowTitle = "", bool wait = false) {
     cv::imshow(windowName, img);
     if (*windowTitle.c_str())
@@ -139,13 +143,13 @@ inline void ShowManyImages(const std::string &windowName, const std::vector<cv::
 
 //returns viewable representation of graph segmentation
 
-inline cv::Mat GetGraphSegmentationViewable(const cv::Mat &imgSegmented) {
+inline cv::Mat GetGraphSegmentationViewable(const cv::Mat &imgSegmented, bool disp_count = false) {
     CV_Assert(imgSegmented.type() == CV_32S);
 
     double min, max;
     cv::minMaxLoc(imgSegmented, &min, &max);
 
-    cv::Mat dispImg = cv::Mat::zeros(imgSegmented.rows, imgSegmented.cols, CV_8UC3);
+    cv::Mat disp_img = cv::Mat::zeros(imgSegmented.rows, imgSegmented.cols, CV_8UC3);
 
     const uint32_t * p;
     uint8_t * p2;
@@ -174,7 +178,7 @@ inline cv::Mat GetGraphSegmentationViewable(const cv::Mat &imgSegmented) {
 
     for (int i = 0; i < imgSegmented.rows; ++i) {
         p = imgSegmented.ptr<uint32_t>(i);
-        p2 = dispImg.ptr<uint8_t>(i);
+        p2 = disp_img.ptr<uint8_t>(i);
 
         for (int j = 0; j < imgSegmented.cols; ++j) {
             cv::Scalar color = color_mapping(int(p[j]));
@@ -184,7 +188,10 @@ inline cv::Mat GetGraphSegmentationViewable(const cv::Mat &imgSegmented) {
         }
     }
 
-    return dispImg;
+    if (disp_count)
+        cv::putText(disp_img, std::to_string(int(max + 1)), cv::Point(10, 25), cv::FONT_HERSHEY_DUPLEX, 0.75, cv::Scalar(0, 0, 0), 1.25);
+
+    return disp_img;
 }
 
 #if 0

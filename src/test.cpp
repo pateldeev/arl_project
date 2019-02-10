@@ -1,4 +1,5 @@
 #include "functions.h"
+
 #include "selectiveSegmentation.h"
 
 #include <iostream>
@@ -7,7 +8,9 @@
 int main(int argc, char * argv[]) {
     //const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
     //const cv::Mat img = cv::imread("/home/dp/Desktop/ARL/darknet-master/networkInput.jpg");
-    const cv::Mat img = cv::imread("/home/dp/Downloads/20181026_153406_HDR.jpg");
+    //const cv::Mat img = cv::imread("/home/dp/Downloads/20181108_190017_HDR.jpg");
+    //const cv::Mat img = cv::imread("/home/dp/Downloads/IMG_0834.jpeg");
+    const cv::Mat img = cv::imread("/home/dp/Desktop/Screenshot 2019-02-07 19:15:42.png");
 #if 1
     std::vector<cv::Rect> proposals;
 
@@ -45,7 +48,7 @@ int main(int argc, char * argv[]) {
         return r1.area() < r2.area();
     });
 
-    //DisplayBoundingBoxesInteractive(img, proposals, "All Proposals");
+    DisplayBoundingBoxesInteractive(img, proposals, "All Proposals");
 
     std::vector<cv::Rect> proposalsFiltered(proposals);
     RemoveOverlapping(proposalsFiltered);
@@ -54,6 +57,7 @@ int main(int argc, char * argv[]) {
     //DisplayBoundingBoxesInteractive(img, proposalsFiltered, "Filtered Proposals");
 
 #ifdef DEBUG_SEGMENTATION    
+    ShowManyImages("m_images", Segmentation::m_images, 2, 3);
     std::vector<cv::Mat> temp1, temp2;
     for (unsigned int i = 0; i < Segmentation::debugDisp1.size(); ++i) {
         temp1.push_back(GetGraphSegmentationViewable(Segmentation::debugDisp1[i]));
@@ -80,13 +84,15 @@ int main(int argc, char * argv[]) {
             tempDisp2.push_back(temp2[i].clone());
         }
 
-        ShowManyImages("m_images[]", tempDisp1, 2, 3);
         ShowManyImages("m_images[]_regions", tempDisp2, 2, 3);
+        ShowManyImages("m_images[]", tempDisp1, 2, 3);
         key = cv::waitKey();
-    } while (key != 'c' || key != 'q');
+    } while (key != 'c' && key != 'q');
+    cv::destroyAllWindows();
 #endif
 
     return 0;
+
     cv::Mat heatMap(img.rows, img.cols, CV_16UC1, cv::Scalar(0));
     CreateHeatMap(proposals, heatMap);
     cv::Mat tempDisp;

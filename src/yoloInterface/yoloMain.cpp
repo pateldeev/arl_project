@@ -1,4 +1,6 @@
 
+#include <opencv2/highgui.hpp>
+
 #include "yoloInterface.h"
 
 #include "functions.h"
@@ -20,7 +22,6 @@ cv::Mat getPredictionImg(YoloInterface &y, const cv::Mat &img) {
 }
 
 int main(int argc, char * argv[]) {
-
     const std::string videoFile = "/home/dp/Downloads/20190125_181346.mp4";
 
     const std::string labelFile = "/home/dp/Desktop/darknet-master/data/coco.names";
@@ -30,7 +31,8 @@ int main(int argc, char * argv[]) {
     YoloInterface yolo(configFile, weightsFile, labelFile);
 
     //const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
-    const cv::Mat img = cv::imread("/home/dp/Downloads/20181026_153406_HDR.jpg");
+    //const cv::Mat img = cv::imread("/home/dp/Downloads/20181108_190017_HDR.jpg");
+    const cv::Mat img = cv::imread("/home/dp/Downloads/IMG_0834.jpeg");
     DisplayImg(getPredictionImg(yolo, img), "full");
 
     int rStart = 100, cStart = 700;
@@ -55,11 +57,8 @@ int main(int argc, char * argv[]) {
         key = cv::waitKey();
 
         std::cout << std::endl << int(key) << std::endl;
-    } while (char(key) != 'c' || char(key) != 'q');
-
-
-
-    cv::waitKey();
+    } while (key != 'c' && key != 'q');
+    cv::destroyAllWindows();
     return 0;
 
     cv::VideoCapture data(videoFile);
@@ -70,7 +69,8 @@ int main(int argc, char * argv[]) {
     DisplayImg(frame, "test");
 
     while (data.read(frame)) {
-        cv::waitKey(1);
+        if (cv::waitKey(1) == 'q') break;
+
         UpdateImg(getPredictionImg(yolo, frame), "test");
     }
 

@@ -1,9 +1,12 @@
 #include "selectiveSegmentation.h"
-#include "functions.h"
 
-#include <iostream>
 #include <map>
 #include <algorithm>
+#include <iostream>
+
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core/types.hpp>
 
 namespace Segmentation {
 
@@ -163,17 +166,16 @@ namespace Segmentation {
 
     void process(const cv::Mat & img, std::vector<cv::Rect> & rects, int base_k, int inc_k, float sigma) {
         rects.clear();
+#ifdef DEBUG_SEGMENTATION
+        debugDisp1.clear();
+        debugDisp2.clear();
+#endif
 
         switchToSelectiveSearchQuality(img, base_k, inc_k, sigma);
 
         std::vector<Region> all_regions;
 
         int image_id = 0;
-
-#ifdef DEBUG_SEGMENTATION
-        std::cout << std::endl << m_images.size() << "," << m_segmentations.size() << std::endl;
-        ShowManyImages("m_images", m_images, 2, 3);
-#endif
 
         for (std::vector<cv::Mat>::const_iterator image = m_images.begin(); image != m_images.end(); ++image) {
             for (std::vector< cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> >::iterator gs = m_segmentations.begin(); gs != m_segmentations.end(); ++gs) {
@@ -253,5 +255,111 @@ namespace Segmentation {
     std::ostream& operator<<(std::ostream & os, const Region & r) {
         os << "Region[WID" << r.id << ", L" << r.level << ", merged to " << r.merged_to << ", R:" << r.rank << ", " << r.bounding_box << "]";
         return os;
+    }
+
+    void getDomains(const cv::Mat &img, std::vector<cv::Mat> &img_domains, int resize_h) {
+        const int old_h = img.rows, old_w = img.cols;
+        const int resize_w = old_w * resize_h / old_h;
+
+        img_domains.resize(6); //6 Domains [BGR, HSV, LAB, I, RGI, YUV]
+
+        //BGR
+        cv::resize(img, img_domains[0], cv::Size(resize_w, resize_h));
+
+        //HSV
+        cv::cvtColor(img_domains[0], img_domains[1], cv::COLOR_BGR2HSV);
+
+        //LAB
+        cv::cvtColor(img_domains[0], img_domains[2], cv::COLOR_BGR2Lab);
+
+        //I - intensity
+        cv::cvtColor(img_domains[0], img_domains[3], cv::COLOR_BGR2GRAY);
+
+        //RGI
+        cv::Mat img_channels[3];
+        cv::split(img_domains[0], img_channels);
+        cv::Mat rgi_channels[3] = {img_channels[2], img_channels[1], img_domains[3]};
+        cv::merge(rgi_channels, 3, img_domains[4]);
+
+        //YUV
+        cv::cvtColor(img_domains[0], img_domains[5], cv::COLOR_BGR2YUV);
+    }
+
+    void getSegmentations(const std::vector<cv::Mat> &img_domains, std::vector< std::vector<cv::Mat> > &segmentations, const std::vector<float> &k_vals, float sigma) {
+        segmentations.resize(img_domains.size(), std::vector<cv::Mat>(k_vals.size()));
+
+        cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> gs = cv::ximgproc::segmentation::createGraphSegmentation(sigma);
+
+        for (int i_k = 0; i_k < k_vals.size(); ++i_k) {
+            gs->setK(k_vals[i_k]);
+            for (int i_d = 0; i_d < img_domains.size(); ++i_d)
+                gs->processImage(img_domains[i_d], segmentations[i_d][i_k]);
+        }
+    }
+
+    void getBoundingBoxes(const cv::Mat &img_seg, std::vector<cv::Rect> &boxes, float max_size) {
+        double min, max;
+        cv::minMaxLoc(img_seg, &min, &max);
+        int num_segs = max + 1;
+
+        const float side_ignore_size = 3; //ignore any regions that touch boundaries of image
+        const int max_points = max_size * img_seg.rows * img_seg.cols;
+        boxes.clear();
+
+        std::unordered_map< int, std::vector<cv::Point> > seg_points;
+        for (int i = 0; i < num_segs; ++i)
+            seg_points[i];
+
+        const uint32_t * ptr_seg;
+        std::unordered_map< int, std::vector<cv::Point> >::iterator points;
+
+        for (int i = 0; i < img_seg.rows; ++i) {
+            ptr_seg = img_seg.ptr<uint32_t>(i);
+
+            for (int j = 0; j < img_seg.cols; ++j) {
+                int seg = ptr_seg[j];
+                points = seg_points.find(seg);
+                if (points != seg_points.end()) {
+                    if (i < side_ignore_size || i > img_seg.rows - side_ignore_size || j < side_ignore_size || j > img_seg.cols - side_ignore_size) {
+                        seg_points.erase(points); //segment is near the edge - ignore region
+                    } else {
+                        if (points->second.size() > max_points)
+                            seg_points.erase(points);
+                        else
+                            points->second.push_back(cv::Point(j, i));
+                    }
+                }
+            }
+        }
+
+        for (const std::pair< int, std::vector<cv::Point> > &p : seg_points)
+            boxes.emplace_back(cv::boundingRect(p.second));
+    }
+
+    void calculateSegnificantRegions(const std::vector< std::vector< std::vector<cv::Rect> > > &regions_img, std::vector< std::pair<cv::Rect, float> > &regions_significant, float merge_tresh) {
+        regions_significant.clear();
+
+        std::vector<float> weights(regions_img[0].size());
+        for (int i = 0; i < weights.size(); ++i)
+            weights[i] = 1 / (1 + std::exp(-i)); //weight per segmentation level.
+
+        for (const std::vector< std::vector<cv::Rect> > &regions_domain : regions_img) { //iterate through each domain
+            for (int s = 0; s < regions_domain.size(); ++s) {
+                for (const cv::Rect &region : regions_domain[s]) {
+                    bool merged = false;
+
+                    for (std::pair<cv::Rect, float> &r_s : regions_significant) {
+                        if (float((region & r_s.first).area()) / (region | r_s.first).area() >= merge_tresh) {
+                            r_s.first = region | r_s.first;
+                            r_s.second += weights[s];
+                            merged = true;
+                        }
+                    }
+
+                    if (!merged)
+                        regions_significant.emplace_back(region, weights[s]);
+                }
+            }
+        }
     }
 };

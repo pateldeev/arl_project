@@ -8,7 +8,19 @@ FIND_PACKAGE(OpenCV 4.0.0 REQUIRED)
 FIND_PACKAGE(CUDA REQUIRED)
 FIND_PACKAGE(OpenMP REQUIRED)
 
-SET(INCLUDES ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src/yoloInterface/darknet/include ${OpenCV_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
+#Find flycapture library
+FIND_LIBRARY(FlyCapture2_LIBS NAMES flycapture libflycapture)
+FIND_PATH(FlyCapture2_INCLUDE_DIRS NAMES "flycapture/FlyCapture2.h" "FlyCapture2.h" PATHS "usr/include" "usr")
+if(NOT FlyCapture2_LIBS)
+  MESSAGE(FATAL_ERROR "Could not find flycapture library!")
+endif(NOT FlyCapture2_LIBS)
+if(NOT FlyCapture2_INCLUDE_DIRS)
+  MESSAGE(FATAL_ERROR "Could not find flycapture include directory!")
+else(NOT FlyCapture2_INCLUDE_DIRS)
+  SET(FlyCapture2_INCLUDE_DIRS "${FlyCapture2_INCLUDE_DIRS}/flycapture")
+endif(NOT FlyCapture2_INCLUDE_DIRS)
+
+SET(INCLUDES ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src/yoloInterface/darknet/include ${OpenCV_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS} ${FlyCapture2_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${INCLUDES})
 
 #Copy darknet (YOLOv3) files to build directory - needed to build darknet library
@@ -31,17 +43,28 @@ ADD_EXECUTABLE(regions "${PROJECT_SOURCE_DIR}/src/regions.cpp" "${PROJECT_SOURCE
 ADD_EXECUTABLE(saliency "${PROJECT_SOURCE_DIR}/src/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
 ADD_EXECUTABLE(filteredRegions "${PROJECT_SOURCE_DIR}/src/filteredRegions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
 
-ADD_EXECUTABLE(testarea "${PROJECT_SOURCE_DIR}/src/test.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
+ADD_EXECUTABLE(testareaOld "${PROJECT_SOURCE_DIR}/src/test.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
 ADD_EXECUTABLE(contours "${PROJECT_SOURCE_DIR}/src/contours.cpp")
 
 ADD_EXECUTABLE(yoloVisualization "${PROJECT_SOURCE_DIR}/src/yoloInterface/visualization.cpp")
-ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/main.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
+ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
+
+ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/yoloInterface/webCam.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
+ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
+
+ADD_EXECUTABLE(testarea "${PROJECT_SOURCE_DIR}/src/segmentationMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
+
 
 #link executables to libraries
 TARGET_LINK_LIBRARIES(regions ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(saliency ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(filteredRegions ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(testarea ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(testareaOld ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(contours ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(yoloVisualization ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(yolo ${OpenCV_LIBS} ${DARKNET_LIBS})
+
+TARGET_LINK_LIBRARIES(webcam ${OpenCV_LIBS} ${DARKNET_LIBS})
+TARGET_LINK_LIBRARIES(video ${OpenCV_LIBS} ${FlyCapture2_LIBS})
+
+TARGET_LINK_LIBRARIES(testarea ${OpenCV_LIBS})
