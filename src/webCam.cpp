@@ -4,7 +4,7 @@
 #include "yoloInterface.h"
 
 #include "functions.h"
-#include "selectiveSegmentation.h"
+#include "segmentationCV.h"
 
 cv::Mat getPredictionImg(YoloInterface &y, const cv::Mat &img) {
     cv::Mat disp_img = img.clone();
@@ -76,14 +76,14 @@ int main(int argc, char * argv[]) {
             cv::resize(frame, imgResized, cv::Size(resizeWidth, resizeHeight));
             DisplayImg(imgResized, "resized");
 
-            Segmentation::process(imgResized, proposals, 150, 150, 0.8);
+            SegmentationCV::process(imgResized, proposals, 150, 150, 0.8);
 
 #ifdef DEBUG_SEGMENTATION
-            ShowManyImages("m_images", Segmentation::m_images, 2, 3);
+            ShowManyImages("m_images", SegmentationCV::m_images, 2, 3);
             std::vector<cv::Mat> temp1, temp2;
-            for (unsigned int i = 0; i < Segmentation::debugDisp1.size(); ++i) {
-                temp1.push_back(GetGraphSegmentationViewable(Segmentation::debugDisp1[i]));
-                temp2.push_back(Segmentation::debugDisp2[i]);
+            for (unsigned int i = 0; i < SegmentationCV::debugDisp1.size(); ++i) {
+                temp1.push_back(GetGraphSegmentationViewable(SegmentationCV::debugDisp1[i]));
+                temp2.push_back(SegmentationCV::debugDisp2[i]);
             }
             unsigned int key = '-';
             int currentView = 1;
@@ -99,8 +99,8 @@ int main(int argc, char * argv[]) {
                 }
 
                 std::vector<cv::Mat> tempDisp1, tempDisp2;
-                tempDisp1.push_back(Segmentation::m_images[currentView].clone());
-                tempDisp2.push_back(Segmentation::m_images[currentView].clone());
+                tempDisp1.push_back(SegmentationCV::m_images[currentView].clone());
+                tempDisp2.push_back(SegmentationCV::m_images[currentView].clone());
                 for (unsigned int i = currentView * 5; i < currentView * 5 + 5; ++i) {
                     tempDisp1.push_back(temp1[i].clone());
                     tempDisp2.push_back(temp2[i].clone());

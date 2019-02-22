@@ -44,7 +44,7 @@ inline char UpdateImg(const cv::Mat &img, const std::string &windowName, const s
 
 //draw single bounding box
 
-inline void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 0), bool showCenter = true) {
+inline void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 0), bool showCenter = false) {
     cv::rectangle(img, rect, color);
     if (showCenter)
         cv::drawMarker(img, (rect.tl() + rect.br()) / 2, color);
@@ -97,6 +97,18 @@ inline void DisplayBoundingBoxesInteractive(const cv::Mat &img, const std::vecto
             numRectsShown -= increment; // decrease total number of rectangles to show by increment
         else if (k == 'c')
             return;
+    }
+}
+
+inline void WriteText(cv::Mat &img, const std::string &text, float font_size = 0.75, const cv::Scalar &font_color = cv::Scalar(0, 0, 255), const cv::Point &pos = cv::Point(10, 25)) {
+    cv::putText(img, text, pos, cv::FONT_HERSHEY_DUPLEX, font_size, font_color, 1.25);
+}
+
+inline void WriteText(cv::Mat &img, const std::vector<std::string> &text, float font_size = 0.75, const cv::Scalar &font_color = cv::Scalar(0, 0, 255), const cv::Point &start_pos = cv::Point(10, 25), const cv::Point &change_per_line = cv::Point(0, 25)) {
+    cv::Point pos = start_pos;
+    for (const std::string &t : text) {
+        WriteText(img, t, font_size, font_color, pos);
+        pos += change_per_line;
     }
 }
 
@@ -189,7 +201,7 @@ inline cv::Mat GetGraphSegmentationViewable(const cv::Mat &imgSegmented, bool di
     }
 
     if (disp_count)
-        cv::putText(disp_img, std::to_string(int(max + 1)), cv::Point(10, 25), cv::FONT_HERSHEY_DUPLEX, 0.75, cv::Scalar(0, 0, 0), 1.25);
+        WriteText(disp_img, std::to_string(int(max + 1)));
 
     return disp_img;
 }

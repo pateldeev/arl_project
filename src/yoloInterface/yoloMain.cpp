@@ -6,19 +6,7 @@
 #include "functions.h"
 
 cv::Mat getPredictionImg(YoloInterface &y, const cv::Mat &img) {
-    cv::Mat disp_img = img.clone();
-
-    std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > regions = y.processImage(img);
-
-    int text_y_loc = 1;
-    for (std::pair<cv::Rect, std::pair<float, std::string>> &r : regions) {
-        cv::Scalar color(100 + std::rand() % 155, 100 + std::rand() % 155, 100 + std::rand() % 155);
-        std::string text = r.second.second + "(" + std::to_string(r.second.first) + ")";
-        cv::rectangle(disp_img, r.first, color, 2);
-        cv::putText(disp_img, text, cv::Point(10, 25 * (++text_y_loc)), cv::FONT_HERSHEY_DUPLEX, 0.75, color, 1.25);
-    }
-
-    return disp_img;
+    return YoloInterface::getPredictionsDisplayable(img, y.processImage(img));
 }
 
 int main(int argc, char * argv[]) {
@@ -50,10 +38,11 @@ int main(int argc, char * argv[]) {
 
         try {
             const cv::Mat img_sub = img(cv::Range(rStart, rStart + 608), cv::Range(cStart, cStart + 608));
-            DisplayImg(getPredictionImg(yolo, img_sub), "sub_image");
+            DisplayImg(getPredictionImg(yolo, img_sub), "sub_img");
         } catch (...) {
-
+            std::cerr << "Error: out of range!" << std::endl;
         }
+
         key = cv::waitKey();
 
         std::cout << std::endl << int(key) << std::endl;

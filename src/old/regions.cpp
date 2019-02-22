@@ -106,9 +106,9 @@ void contourSegmentation(const cv::Mat & img) {
 }
 
 int main(int argc, char * argv[]) {
-    //const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
+    const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
     //const cv::Mat img = cv::imread("/home/dp/Desktop/YOLO/darknet/data/dog.jpg");
-    const cv::Mat img = cv::imread("/home/dp/Desktop/ARL/darknet-master/networkInput.jpg");
+    // const cv::Mat img = cv::imread("/home/dp/Desktop/ARL/darknet-master/networkInput.jpg");
 
     graphSegmentation(img);
     //selectiveSegmentation(img);

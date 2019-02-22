@@ -39,32 +39,39 @@ ADD_DEPENDENCIES(DARKNET_LIBRARY DARKNET_BUILD)
 SET(DARKNET_LIBS DARKNET_LIBRARY)
 
 #create various executables
-ADD_EXECUTABLE(regions "${PROJECT_SOURCE_DIR}/src/regions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
-ADD_EXECUTABLE(saliency "${PROJECT_SOURCE_DIR}/src/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
-ADD_EXECUTABLE(filteredRegions "${PROJECT_SOURCE_DIR}/src/filteredRegions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
+ADD_EXECUTABLE(old_regions "${PROJECT_SOURCE_DIR}/src/old/regions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
+ADD_EXECUTABLE(old_saliency "${PROJECT_SOURCE_DIR}/src/old/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
+ADD_EXECUTABLE(old_filteredRegions "${PROJECT_SOURCE_DIR}/src/old/filteredRegions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
+ADD_EXECUTABLE(old_contours "${PROJECT_SOURCE_DIR}/src/old/contours.cpp")
 
-ADD_EXECUTABLE(testareaOld "${PROJECT_SOURCE_DIR}/src/test.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
-ADD_EXECUTABLE(contours "${PROJECT_SOURCE_DIR}/src/contours.cpp")
-
-ADD_EXECUTABLE(yoloVisualization "${PROJECT_SOURCE_DIR}/src/yoloInterface/visualization.cpp")
+ADD_EXECUTABLE(yolo_visualization "${PROJECT_SOURCE_DIR}/src/yoloInterface/visualization.cpp")
 ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
 
-ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/yoloInterface/webCam.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
-ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
+ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/webCam.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
+ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+ADD_EXECUTABLE(fly_capture_camera_detailed "${PROJECT_SOURCE_DIR}/src/flyCameraDetailed.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
-ADD_EXECUTABLE(testarea "${PROJECT_SOURCE_DIR}/src/segmentationMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/selectiveSegmentation.cpp")
+ADD_EXECUTABLE(cv_segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMainCV.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
+ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+ADD_EXECUTABLE(segmentation_old "${PROJECT_SOURCE_DIR}/src/segmentation/segMainOld.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
+ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
 #link executables to libraries
-TARGET_LINK_LIBRARIES(regions ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(saliency ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(filteredRegions ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(testareaOld ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(contours ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(yoloVisualization ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(old_regions ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(old_saliency ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(old_filteredRegions ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(old_contours ${OpenCV_LIBS})
+
+TARGET_LINK_LIBRARIES(yolo_visualization ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(yolo ${OpenCV_LIBS} ${DARKNET_LIBS})
 
 TARGET_LINK_LIBRARIES(webcam ${OpenCV_LIBS} ${DARKNET_LIBS})
-TARGET_LINK_LIBRARIES(video ${OpenCV_LIBS} ${FlyCapture2_LIBS})
+TARGET_LINK_LIBRARIES(fly_capture_camera ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
+TARGET_LINK_LIBRARIES(fly_capture_camera_detailed ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
 
-TARGET_LINK_LIBRARIES(testarea ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(cv_segmentation ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(segmentation ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(segmentation_old ${OpenCV_LIBS})
+
+TARGET_LINK_LIBRARIES(test_area ${OpenCV_LIBS})

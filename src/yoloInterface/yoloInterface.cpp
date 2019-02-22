@@ -37,7 +37,7 @@ std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > YoloInterface:
 
     double time = what_time_is_it_now();
     network_predict(m_net, img_resized.data);
-    printf("\nPredicted in %f seconds.\n", (what_time_is_it_now() - time));
+    //printf("\nPredicted in %f seconds.\n", (what_time_is_it_now() - time));
 
     int nboxes = 0;
     detection *dets = get_network_boxes(m_net, img_yolo.w, img_yolo.h, m_thresh, m_thresh_hier, 0, 1, &nboxes);
@@ -62,6 +62,20 @@ std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > YoloInterface:
     free_image(img_yolo);
 
     return regions;
+}
+
+cv::Mat YoloInterface::getPredictionsDisplayable(const cv::Mat &img, const std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions) {
+    cv::Mat disp_img = img.clone();
+
+    int text_y_loc = 1;
+    for (const std::pair<cv::Rect, std::pair<float, std::string>> &r : predictions) {
+        cv::Scalar color(100 + std::rand() % 155, 100 + std::rand() % 155, 100 + std::rand() % 155);
+        std::string text = r.second.second + "(" + std::to_string(r.second.first) + ")";
+        cv::rectangle(disp_img, r.first, color, 2);
+        cv::putText(disp_img, text, cv::Point(10, 25 * (++text_y_loc)), cv::FONT_HERSHEY_DUPLEX, 0.75, color, 1.25);
+    }
+
+    return disp_img;
 }
 
 cv::Mat YoloInterface::img_yolo_to_cv(const image &img) {

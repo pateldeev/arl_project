@@ -1,15 +1,16 @@
-#ifndef SELECTIVESEGMENTATION_H
-#define SELECTIVESEGMENTATION_H
+#ifndef SEGMENTATIONCV_H
+#define SEGMENTATIONCV_H
 
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-
 #include <opencv2/ximgproc/segmentation.hpp>
+
+#include <iostream>
 
 #define DEBUG_SEGMENTATION
 
-namespace Segmentation {
+namespace SegmentationCV {
 
 #ifdef DEBUG_SEGMENTATION
     extern std::vector<cv::Mat> m_images;
@@ -83,14 +84,6 @@ namespace Segmentation {
             return similarity < n.similarity;
         }
     };
-
-
-    //6 Domains [BGR, HSV, LAB, I, RGI, YUV]
-    void getDomains(const cv::Mat &img, std::vector<cv::Mat> &img_domains, int resize_h = 200);
-    void getSegmentations(const std::vector<cv::Mat> &img_domains, std::vector< std::vector<cv::Mat> > &segmentations, const std::vector<float> &k_vals, float sigma = 0.8);
-    void getBoundingBoxes(const cv::Mat &img_seg, std::vector<cv::Rect> &boxes, float max_size = 0.5);
-
-    void calculateSegnificantRegions(const std::vector< std::vector< std::vector<cv::Rect> > > &regions_img, std::vector< std::pair<cv::Rect, float> > &regions_significant, float merge_tresh = 0.9);
 };
 
 #endif

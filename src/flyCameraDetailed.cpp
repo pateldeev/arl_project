@@ -52,8 +52,10 @@ int main(int argc, char * argv[]) {
     const std::vector<int> save_params = {cv::IMWRITE_PNG_COMPRESSION, 0};
 
     //for performing segmentation
-    std::vector<cv::Rect> segmentation_regions;
-    std::vector<float> segmentation_scores;
+    const std::vector<float> k_values = {500, 600, 700, 800, 900};
+    int disp_domain = 0;
+    std::vector<cv::Mat> img_domains;
+    std::vector< std::vector<cv::Mat> > img_segmentations;
 
     //for performing yolo detection
     const std::string labelFile = "/home/dp/Desktop/darknet-master/data/coco.names";
@@ -68,11 +70,12 @@ int main(int argc, char * argv[]) {
     //for control of operations
     unsigned int key = '\0';
     bool run_segmentation = false;
+    bool update_segmentation_display = false;
     bool run_yolo = false;
     bool pause_camera = false;
     bool capture_frame = false;
     bool save_captured = false;
-    const std::vector<std::string> help_text = {"c: capture", "w: save captured", "p: pause", "r: reset everything", "s: segment captured", "y: run yolo on captured", "Q/ESC: exit"};
+    const std::vector<std::string> help_text = {"c: capture", "w: save captured", "p: pause", "r: reset everything", "s: segment captured", "   +/-: change segmentation display domain", "y: run yolo on captured", "Q/ESC: exit"};
 
     if (!startFlyCapture(camera)) { //start camera
         std::cerr << "Could not start fly capture camera! " << std::endl;
@@ -89,8 +92,15 @@ int main(int argc, char * argv[]) {
                 pause_camera = false;
             } else {
                 cv::destroyAllWindows();
-                run_segmentation = run_yolo = pause_camera = capture_frame = save_captured = false;
+                run_segmentation = update_segmentation_display = run_yolo = pause_camera = capture_frame = save_captured = false;
             }
+        } else if (key == '+' || key == '=') { //view next domain for segmentation
+            ++disp_domain %= img_domains.size();
+            update_segmentation_display = true;
+        } else if (key == '-') { //view previous domain for segmentation
+            if (--disp_domain < 0)
+                disp_domain += img_domains.size();
+            update_segmentation_display = true;
         } else if (key == 'c') { //capture image
             capture_frame = true;
         } else if (key == 'w') { //save captured image
@@ -126,15 +136,28 @@ int main(int argc, char * argv[]) {
 
         if (run_segmentation) { // Run segmentation
             t1 = std::chrono::high_resolution_clock::now();
-            Segmentation::process(img_captured, segmentation_regions, segmentation_scores);
+            Segmentation::getDomains(img_captured, img_domains);
+            Segmentation::getSegmentations(img_domains, img_segmentations, k_values);
             t2 = std::chrono::high_resolution_clock::now();
 
             duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
             std::cout << std::endl << "Segmentation Time: " << duration / 1000 << "s" << std::endl;
 
-            Segmentation::showSegmentationResults(img_captured, segmentation_regions, segmentation_scores);
-
             run_segmentation = false;
+            update_segmentation_display = true;
+        }
+
+        if (update_segmentation_display) { //display segmentation results
+            std::vector<cv::Mat> temp;
+            temp.push_back(img_domains[disp_domain].clone());
+            for (const cv::Mat &s : img_segmentations[disp_domain])
+                temp.push_back(GetGraphSegmentationViewable(s));
+
+            WriteText(temp[0], std::to_string(disp_domain));
+            ShowManyImages("domains_all", img_domains, 2, 3);
+            ShowManyImages("selected_domain_segmentations", temp, 2, 3);
+
+            update_segmentation_display = false;
         }
 
         if (run_yolo) { //run yolo on captured image

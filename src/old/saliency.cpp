@@ -3,7 +3,7 @@
 #include <iostream>
 
 int main(int argc, char * argv[]) {
-    const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
+    const cv::Mat img = cv::imread("/home/dp/Downloads/ARL_data/5.png");
     //const cv::Mat img = cv::imread("/home/dp/Downloads/VOCdevkit/VOC2007/JPEGImages/000013.jpg");
     DisplayImg(img, "Orignal_Img");
 

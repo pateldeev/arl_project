@@ -85,7 +85,7 @@ void interactiveDisplay(const cv::Mat & img, const YoloPredictions<LAYERSIZE1> &
             CV_Assert(0); //error - should not be possible
 
         for (unsigned int a = 0; a < 3; ++a) {
-            DrawBoundingBox(dispImg, predictions[a].first, colors[a]);
+            DrawBoundingBox(dispImg, predictions[a].first, colors[a], true);
             cv::putText(dispImg, std::to_string(predictions[a].second), cv::Point(10, 25 + 25 * a), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, colors[a]);
         }
 

@@ -4,6 +4,7 @@
 #include "darknet.h"
 
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include <string>
 #include <vector>
@@ -22,6 +23,8 @@ public:
     void setThresholds(float threshold = 0.5, float threshold_hier = 0.5);
 
     std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > processImage(const cv::Mat &img);
+
+    static cv::Mat getPredictionsDisplayable(const cv::Mat &img, const std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions);
 
 
 private:
