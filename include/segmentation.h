@@ -23,6 +23,8 @@ namespace Segmentation {
     void generateRegionProposals(const std::vector< std::vector<cv::Mat> > &segmentations, std::vector<RegionProposal> &proposals, float max_region_size = 0.5);
     void mergeProposalsWithinSegmentationLevel(std::vector<RegionProposal> &proposals, float IOU_thresh = 0.92);
     void mergeProposalsBetweenSegmentationLevels(std::vector<RegionProposal> &proposals, float min_score = 1.f, float IOU_thresh = 0.95);
+    void getSignificantMergedRegions(const std::vector<RegionProposal> &proposals, std::vector<cv::Rect> &signficiant_regions, std::vector<float> &sigificant_region_scores);
+    void resizeRegions(std::vector<cv::Rect> &regions, int original_w, int original_h, int resize_w, int resize_h);
 
     //old methodology
     void calculateSignificantRegions(const std::vector< std::vector< std::vector<cv::Rect> > > &regions_img, std::vector< std::pair<cv::Rect, float> > &regions_significant, float IOU_thresh = 0.9);

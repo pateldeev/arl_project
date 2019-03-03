@@ -102,16 +102,21 @@ void showProposals(const cv::Mat &img, const std::vector<Segmentation::RegionPro
 }
 
 int main(int argc, char * argv[]) {
-#if 1
+#if 0
     const char file_name_format[] = "/home/dp/Downloads/ARL_data/%d.png";
     char file_name[100];
     int file_count = 19;
     const int file_count_max = 30;
-#else 
+#elif 0 
     const char file_name_format[] = "/home/dp/Downloads/data_2/%d.png";
     char file_name[100];
     int file_count = 0;
     const int file_count_max = 15;
+#else
+    const char file_name_format[] = "/home/dp/Downloads/data_cumulative/%d.png";
+    char file_name[100];
+    int file_count = 0;
+    const int file_count_max = 18;
 #endif
 
     cv::Mat img;
@@ -171,14 +176,13 @@ int main(int argc, char * argv[]) {
             showProposals(img_domains[0], img_proposals, "all_regions");
             showProposalsMergedWithin(img_domains[0], proposals_merged_within_levels);
 
-            std::vector<Segmentation::RegionProposal> temp;
-            for (const Segmentation::RegionProposal &p : proposals_merged_between_levels) {
-                if (p.seg_level == -1)
-                    temp.push_back(p);
-                else
-                    break;
-            }
-            showProposals(img_domains[0], temp, "merged_regions", true);
+
+
+            std::vector<cv::Rect> final_proposals;
+            std::vector<float> final_proposal_scores;
+            Segmentation::getSignificantMergedRegions(proposals_merged_between_levels, final_proposals, final_proposal_scores);
+            Segmentation::resizeRegions(final_proposals, img.cols, img.rows, img.cols * 200 / img.rows, 200);
+            Segmentation::showSegmentationResults(img, final_proposals, final_proposal_scores, "FINAL-Significant regions");
 
             std::cout << "total number of detected regions: " << img_proposals.size() << std::endl;
         }

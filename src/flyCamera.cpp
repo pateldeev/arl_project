@@ -5,6 +5,7 @@
 #include "yoloInterface.h"
 
 #include <chrono>
+#include <opencv2/core.hpp>
 
 bool startFlyCapture(FlyCapture2::Camera &camera) {
     FlyCapture2::Error error;
@@ -46,10 +47,13 @@ int main(int argc, char * argv[]) {
 
     //for capturing and saving images
     cv::Mat img_captured;
-    const char save_file_format[] = "/home/dp/Downloads/data/%d.png";
-    char save_file_name[100];
+    const char save_file_format[] = "/home/dp/Downloads/test/%d.png";
+    const char save_file_format_video[] = "/home/dp/Downloads/test/%d.avi";
+    char save_name[100];
     int save_count = 0;
     const std::vector<int> save_params = {cv::IMWRITE_PNG_COMPRESSION, 0};
+    cv::VideoWriter img_video;
+    const int fourcc = cv::VideoWriter::fourcc('p', 'n', 'g', ' ');
 
     //for performing segmentation
     std::vector<cv::Rect> segmentation_regions;
@@ -72,7 +76,8 @@ int main(int argc, char * argv[]) {
     bool pause_camera = false;
     bool capture_frame = false;
     bool save_captured = false;
-    const std::vector<std::string> help_text = {"c: capture", "w: save captured", "p: pause", "r: reset everything", "s: segment captured", "y: run yolo on captured", "Q/ESC: exit"};
+    bool video_capture = false;
+    const std::vector<std::string> help_text = {"c: capture", "w: save captured", "p: pause", "r: reset everything", "s: segment captured", "y: run yolo on captured", "v: run video capture", "Q/ESC: exit"};
 
     if (!startFlyCapture(camera)) { //start camera
         std::cerr << "Could not start fly capture camera! " << std::endl;
@@ -89,23 +94,31 @@ int main(int argc, char * argv[]) {
                 pause_camera = false;
             } else {
                 cv::destroyAllWindows();
-                run_segmentation = run_yolo = pause_camera = capture_frame = save_captured = false;
+                run_segmentation = run_yolo = pause_camera = capture_frame = save_captured = video_capture = false;
             }
+            if (video_capture) {
+                img_video.release();
+                video_capture = false;
+            }
+
         } else if (key == 'c') { //capture image
             capture_frame = true;
         } else if (key == 'w') { //save captured image
             save_captured = true;
         } else if (key == 'y') { //run yolo
             run_yolo = true;
+        } else if (key == 'v' && !video_capture) {
+            sprintf(save_name, save_file_format_video, save_count++);
+            img_video.open(save_name, -1, 20, cv::Size(frame.cols, frame.rows), true);
+            video_capture = true;
         }
-
         if (capture_frame) //capture frame if requested
             img_captured = frame.clone();
 
         if (save_captured) {
-            sprintf(save_file_name, save_file_format, save_count++);
-            cv::imwrite(save_file_name, frame, save_params);
-            std::cout << "Saved captured frame to: " << save_file_name << std::endl;
+            sprintf(save_name, save_file_format, save_count++);
+            cv::imwrite(save_name, frame, save_params);
+            std::cout << "Saved captured frame to: " << save_name << std::endl;
             save_captured = false;
         }
 
@@ -122,6 +135,7 @@ int main(int argc, char * argv[]) {
             // convert to OpenCV Mat
             unsigned int rowBytes = double(rgbImage.GetReceivedDataSize()) / double(rgbImage.GetRows());
             frame = cv::Mat(rgbImage.GetRows(), rgbImage.GetCols(), CV_8UC3, rgbImage.GetData(), rowBytes);
+            cv::flip(frame, frame, -1);
         }
 
         if (run_segmentation) { // Run segmentation
@@ -154,6 +168,14 @@ int main(int argc, char * argv[]) {
             capture_frame = false;
         }
 
+        if (video_capture) {
+            img_video << frame;
+            static int cnt = 0;
+            if (++cnt % 20 == 1) {
+                sprintf(save_name, save_file_format, save_count++);
+                cv::imwrite(save_name, frame, save_params);
+            }
+        }
         key = cv::waitKey(1);
     } while (key != 'q' && key != 27); //'q' or 'ESC' to exit
 

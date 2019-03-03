@@ -118,7 +118,6 @@ void CalculateSaliceny(const cv::Mat & img, cv::Mat & saliencyMat, bool useFineG
         cv::Ptr<cv::saliency::StaticSaliencyFineGrained> saliency = cv::saliency::StaticSaliencyFineGrained::create();
         saliency->computeSaliency(img, saliencyMat);
     } else {
-
         cv::Ptr<cv::saliency::StaticSaliencySpectralResidual> saliency = cv::saliency::StaticSaliencySpectralResidual::create();
         saliency->computeSaliency(img, saliencyMat);
         cv::normalize(saliencyMat, saliencyMat, 0, 255, cv::NORM_MINMAX, CV_8UC1);

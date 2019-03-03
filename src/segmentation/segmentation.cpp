@@ -11,6 +11,7 @@ namespace Segmentation {
     void process(const cv::Mat &img, std::vector<cv::Rect> &proposals, std::vector<float> &scores) {
         std::vector<cv::Mat> img_domains;
         const int resize_h = 200;
+        const int resize_w = img.cols * resize_h / img.rows;
         getDomains(img, img_domains, resize_h);
 
         const std::vector<float> k_values = {600, 700, 800, 900, 1000};
@@ -24,29 +25,9 @@ namespace Segmentation {
 
         mergeProposalsBetweenSegmentationLevels(img_proposals); //merge different segmentation levels
 
-        //transfer the most significant proposals
-        proposals.clear();
-        scores.clear();
-        for (const RegionProposal &p : img_proposals) {
-            if (p.seg_level == -1) {
-                proposals.push_back(p.box);
-                scores.push_back(p.score);
-            } else {
-                break;
-            }
-        }
+        getSignificantMergedRegions(img_proposals, proposals, scores); //get only regions merged between segmentation levels
 
-        //rescale rectangles back for original image
-        const int resize_w = img.cols * resize_h / img.rows;
-        int x, y, w, h;
-        for (cv::Rect &r : proposals) {
-            x = img.cols * (double(r.x) / resize_w);
-            y = img.rows * (double(r.y) / resize_h);
-            w = img.cols * (double(r.width) / resize_w);
-            h = img.rows * (double(r.height) / resize_h);
-
-            r = cv::Rect(x, y, w, h);
-        }
+        resizeRegions(proposals, img.cols, img.rows, resize_w, resize_h);
     }
 
     void showSegmentationResults(const cv::Mat &img, const std::vector<cv::Rect> &proposals, const std::vector<float> &scores, const std::string &window_name) {
@@ -56,8 +37,8 @@ namespace Segmentation {
         for (int i = 0; i < proposals.size(); ++i) {
             cv::Scalar color(std::rand() % 255, std::rand() % 255, std::rand() % 255);
             DrawBoundingBox(disp_img, proposals[i], color);
-            std::string score("00.000");
-            std::snprintf(const_cast<char*> (score.c_str()), score.size(), "%.2f", scores[i]);
+            std::string score("000.000");
+            std::snprintf(const_cast<char*> (score.c_str()), score.size(), "%.3f", scores[i]);
             score.resize(score.find_first_of('\0'));
             WriteText(disp_img, score, 0.7, color, cv::Point(2, 20 * (++disp_position)));
         }
@@ -183,7 +164,7 @@ namespace Segmentation {
                     for (int j = 0; j < img_seg.cols; ++j) {
                         int seg = ptr_seg[j];
                         seg_points = seg_points_map.find(seg);
-                        if (seg_points != seg_points_map.end()) { //only concern ourselves with 
+                        if (seg_points != seg_points_map.end()) { //only concern ourselves with valid regions
                             if (i < side_ignore_size || i > img_seg.rows - side_ignore_size || j < side_ignore_size || j > img_seg.cols - side_ignore_size) {
                                 seg_points_map.erase(seg_points); //segment is near the edge - erase from map
                             } else {
@@ -322,6 +303,37 @@ namespace Segmentation {
                 return r1.seg_level < r2.seg_level;
         });
     }
+
+    //get only the proposals that have been merged between domains - proposals must be sorted by segmentation level (low to high)
+
+    void getSignificantMergedRegions(const std::vector<RegionProposal> &proposals, std::vector<cv::Rect> &signficiant_regions, std::vector<float> &sigificant_region_scores) {
+        //transfer the most significant proposals
+        signficiant_regions.clear();
+        sigificant_region_scores.clear();
+        for (const RegionProposal &p : proposals) {
+            if (p.seg_level == -1) {
+                signficiant_regions.push_back(p.box);
+                sigificant_region_scores.push_back(p.score);
+            } else {
+                break;
+            }
+        }
+    }
+
+    void resizeRegions(std::vector<cv::Rect> &regions, int original_w, int original_h, int resize_w, int resize_h) {
+        //rescale rectangles
+        int x, y, w, h;
+        for (cv::Rect &r : regions) {
+            x = original_w * (double(r.x) / resize_w);
+            y = original_h * (double(r.y) / resize_h);
+            w = original_w * (double(r.width) / resize_w);
+            h = original_h * (double(r.height) / resize_h);
+
+            r = cv::Rect(x, y, w, h);
+        }
+    }
+
+
 
     //old methodology - for selectiveSegmentationMain
 
