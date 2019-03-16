@@ -2,11 +2,6 @@
 #define SEGMENTATION_H
 
 #include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/ximgproc/segmentation.hpp>
-
-#include <iostream>
 
 namespace Segmentation {
 
@@ -43,9 +38,17 @@ namespace Segmentation {
         //returns true is successful
 
         bool tryMerge(RegionProposal &other, float IOU_thresh) {
-            if (float((box & other.box).area()) / (box | other.box).area() >= IOU_thresh) {
+            if (float((box & other.box).area()) / (box | other.box).area() >= IOU_thresh) { //merge successful  
                 box |= other.box;
                 score += other.score;
+
+                //keep track of total score of all merges
+                if (other.status == 1)
+                    total_merge_scores += other.score;
+                if (status == 1)
+                    total_merge_scores += score;
+
+                //update status showing merge
                 other.status = 0;
                 status = 2;
                 return true; //merged
@@ -69,6 +72,8 @@ namespace Segmentation {
             os << p.seg_level << ',' << p.domain << '|' << p.score << '|' << p.box << "||" << p.status;
             return os;
         }
+
+        static float total_merge_scores;
     };
 };
 

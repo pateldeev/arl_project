@@ -2,10 +2,10 @@
 
 #include "functions.h"
 #include "segmentation.h"
+#include "saliency.h"
 #include "yoloInterface.h"
 
 #include <chrono>
-#include <opencv2/core.hpp>
 
 bool startFlyCapture(FlyCapture2::Camera &camera) {
     FlyCapture2::Error error;
@@ -147,6 +147,9 @@ int main(int argc, char * argv[]) {
             std::cout << std::endl << "Segmentation Time: " << duration / 1000 << "s" << std::endl;
 
             Segmentation::showSegmentationResults(img_captured, segmentation_regions, segmentation_scores);
+
+            std::vector<cv::Rect> surviving_regions;
+            SaliencyFilter::removeUnsalient(img_captured, segmentation_regions, segmentation_scores, surviving_regions);
 
             run_segmentation = false;
         }

@@ -1,12 +1,10 @@
 #include "segmentation.h"
 
-#include <map>
-#include <algorithm>
-#include <iostream>
-
 #include "functions.h"
 
 namespace Segmentation {
+
+    float RegionProposal::total_merge_scores = 0;
 
     void process(const cv::Mat &img, std::vector<cv::Rect> &proposals, std::vector<float> &scores) {
         std::vector<cv::Mat> img_domains;
@@ -20,6 +18,7 @@ namespace Segmentation {
 
         std::vector<RegionProposal> img_proposals;
         generateRegionProposals(img_segmentations, img_proposals);
+        RegionProposal::total_merge_scores = 0;
 
         mergeProposalsWithinSegmentationLevel(img_proposals); //merge per segmentation - within domain
 
@@ -313,7 +312,7 @@ namespace Segmentation {
         for (const RegionProposal &p : proposals) {
             if (p.seg_level == -1) {
                 signficiant_regions.push_back(p.box);
-                sigificant_region_scores.push_back(p.score);
+                sigificant_region_scores.push_back(p.score / RegionProposal::total_merge_scores);
             } else {
                 break;
             }

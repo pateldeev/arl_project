@@ -24,6 +24,10 @@ void RemoveOverlapping(std::vector<cv::Rect> &regions, float minOveralap = 0.85)
 // heatMap should be a CV_16UC1 image of all zeros of the correct size 
 void CreateHeatMap(const std::vector<cv::Rect> &regions, cv::Mat &heatMap);
 
+inline cv::Mat GetSubRegionOfMat(const cv::Mat &m, const cv::Rect &r) {
+    return m(cv::Range(r.tl().y, r.br().y + 1), cv::Range(r.tl().x, r.br().x + 1));
+}
+
 inline char DisplayImg(const cv::Mat &img, const std::string &windowName, int width = 1200, int height = 1200, bool wait = false) {
     cv::namedWindow(windowName, cv::WINDOW_NORMAL);
     cv::resizeWindow(windowName, width, height);
@@ -39,13 +43,12 @@ inline char UpdateImg(const cv::Mat &img, const std::string &windowName, const s
     cv::imshow(windowName, img);
     if (*windowTitle.c_str())
         cv::setWindowTitle(windowName, windowTitle);
-    return (wait) ? cv::waitKey() : 0;
 }
 
 //draw single bounding box
 
 inline void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 0), bool showCenter = false) {
-    cv::rectangle(img, rect, color);
+    cv::rectangle(img, rect.tl(), rect.br(), color);
     if (showCenter)
         cv::drawMarker(img, (rect.tl() + rect.br()) / 2, color);
 }
@@ -55,7 +58,7 @@ inline void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar
 
 inline void DrawBoundingBoxes(cv::Mat &img, const std::vector<cv::Rect> &regions, const cv::Scalar &color = cv::Scalar(0, 255, 0)) {
     for (const cv::Rect & rect : regions)
-        cv::rectangle(img, rect, color);
+        cv::rectangle(img, rect.tl(), rect.br(), color);
 }
 
 //make sure grid lines fit evenly for optimal behavior

@@ -148,7 +148,7 @@ int main(int argc, char * argv[]) {
         } else {
             sprintf(file_name, file_name_format, file_count);
             img = cv::imread(file_name);
-            //img = cv::imread("/home/dp/Downloads/IMG_0834.jpeg");
+            //img = cv::imread("/home/dp/Downloads/images_Gonzen_shorten_FLIGHT_LONG_HOMINGEND/frame0762.jpg");
 
             img_proposals.clear();
 

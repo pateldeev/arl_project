@@ -38,6 +38,12 @@ TARGET_LINK_LIBRARIES(DARKNET_LIBRARY INTERFACE pthread ${OpenMP_C_FLAGS} ${CUDA
 ADD_DEPENDENCIES(DARKNET_LIBRARY DARKNET_BUILD)
 SET(DARKNET_LIBS DARKNET_LIBRARY)
 
+##source files
+SET(SRC_HELPER "${PROJECT_SOURCE_DIR}/src/functions.cpp")
+SET(SRC_SEGMENTATION "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+SET(SRC_SEGMENTATION_CV "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp" )
+SET(SRC_SALIENCY "${PROJECT_SOURCE_DIR}/src/saliency/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/SaliencyAnalyzer.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/LineDescriptor.cpp")
+
 #create various executables
 #ADD_EXECUTABLE(old_regions "${PROJECT_SOURCE_DIR}/src/old/regions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
 #ADD_EXECUTABLE(old_saliency "${PROJECT_SOURCE_DIR}/src/old/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
@@ -48,15 +54,15 @@ SET(DARKNET_LIBS DARKNET_LIBRARY)
 #ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
 
 #ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/webCam.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
-ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_HELPER} ${SRC_SALIENCY})
 #ADD_EXECUTABLE(fly_capture_camera_detailed "${PROJECT_SOURCE_DIR}/src/flyCameraDetailed.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
-ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/video.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/video.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 
 #ADD_EXECUTABLE(cv_segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMainCV.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
-ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 #ADD_EXECUTABLE(segmentation_old "${PROJECT_SOURCE_DIR}/src/segmentation/segMainOld.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
-ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY})
 #ADD_EXECUTABLE(test_saliency_merging "${PROJECT_SOURCE_DIR}/src/testSaliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
 #link executables to libraries
