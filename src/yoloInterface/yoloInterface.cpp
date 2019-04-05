@@ -61,7 +61,15 @@ std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > YoloInterface:
     free_image(img_resized);
     free_image(img_yolo);
 
+    sortPredictionsByObjectness(regions);
+
     return regions;
+}
+
+void YoloInterface::sortPredictionsByObjectness(std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions) {
+    std::sort(predictions.begin(), predictions.end(), [](const std::pair<cv::Rect, std::pair<float, std::string>> &p1, const std::pair<cv::Rect, std::pair<float, std::string>> &p2)->bool {
+        return p1.second.first > p2.second.first;
+    });
 }
 
 cv::Mat YoloInterface::getPredictionsDisplayable(const cv::Mat &img, const std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions) {

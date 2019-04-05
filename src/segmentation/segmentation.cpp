@@ -2,6 +2,8 @@
 
 #include "functions.h"
 
+#include <opencv2/ximgproc/segmentation.hpp>
+
 namespace Segmentation {
 
     float RegionProposal::total_merge_scores = 0;
@@ -29,13 +31,13 @@ namespace Segmentation {
         resizeRegions(proposals, img.cols, img.rows, resize_w, resize_h);
     }
 
-    void showSegmentationResults(const cv::Mat &img, const std::vector<cv::Rect> &proposals, const std::vector<float> &scores, const std::string &window_name) {
+    void showSegmentationResults(const cv::Mat &img, const std::vector<cv::Rect> &proposals, const std::vector<float> &scores, const std::string &window_name, unsigned int box_thickness) {
         cv::Mat disp_img = img.clone();
         int disp_position = 0;
 
-        for (int i = 0; i < proposals.size(); ++i) {
+        for (unsigned int i = 0; i < proposals.size(); ++i) {
             cv::Scalar color(std::rand() % 255, std::rand() % 255, std::rand() % 255);
-            DrawBoundingBox(disp_img, proposals[i], color);
+            DrawBoundingBox(disp_img, proposals[i], color, false, box_thickness);
             std::string score("000.000");
             std::snprintf(const_cast<char*> (score.c_str()), score.size(), "%.3f", scores[i]);
             score.resize(score.find_first_of('\0'));
@@ -77,9 +79,9 @@ namespace Segmentation {
         segmentations.resize(img_domains.size(), std::vector<cv::Mat>(k_vals.size()));
         cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> gs = cv::ximgproc::segmentation::createGraphSegmentation(sigma);
 
-        for (int i_k = 0; i_k < k_vals.size(); ++i_k) {
+        for (unsigned int i_k = 0; i_k < k_vals.size(); ++i_k) {
             gs->setK(k_vals[i_k]);
-            for (int i_d = 0; i_d < img_domains.size(); ++i_d)
+            for (unsigned int i_d = 0; i_d < img_domains.size(); ++i_d)
                 gs->processImage(img_domains[i_d], segmentations[i_d][i_k]);
         }
     }
@@ -93,13 +95,13 @@ namespace Segmentation {
         const int max_points = max_region_size * img_seg.rows * img_seg.cols;
 
         std::unordered_map< int, std::vector<cv::Point> > seg_points_map;
-        for (int i = 0; i < num_segs; ++i)
+        for (unsigned int i = 0; i < num_segs; ++i)
             seg_points_map[i]; //create entry for every segment in map
 
         const uint32_t * ptr_seg;
         std::unordered_map< int, std::vector<cv::Point> >::iterator seg_points;
 
-        for (int i = 0; i < img_seg.rows; ++i) {
+        for (unsigned int i = 0; i < img_seg.rows; ++i) {
             ptr_seg = img_seg.ptr<uint32_t>(i);
 
             for (int j = 0; j < img_seg.cols; ++j) {
@@ -141,8 +143,8 @@ namespace Segmentation {
         int num_segs;
         const float side_ignore_size = 3; //size to ignore any regions that touch boundaries of image
 
-        for (int d = 0; d < segmentations.size(); ++d) { //domain
-            for (int s = 0; s < segmentations[d].size(); ++s) { //segmentation
+        for (unsigned int d = 0; d < segmentations.size(); ++d) { //domain
+            for (unsigned int s = 0; s < segmentations[d].size(); ++s) { //segmentation
                 const cv::Mat img_seg = segmentations[d][s];
 
                 cv::minMaxLoc(img_seg, &min, &max);
@@ -157,10 +159,10 @@ namespace Segmentation {
                 const uint32_t * ptr_seg;
                 std::unordered_map< int, std::vector<cv::Point> >::iterator seg_points;
 
-                for (int i = 0; i < img_seg.rows; ++i) {
+                for (unsigned int i = 0; i < img_seg.rows; ++i) {
                     ptr_seg = img_seg.ptr<uint32_t>(i);
 
-                    for (int j = 0; j < img_seg.cols; ++j) {
+                    for (unsigned int j = 0; j < img_seg.cols; ++j) {
                         int seg = ptr_seg[j];
                         seg_points = seg_points_map.find(seg);
                         if (seg_points != seg_points_map.end()) { //only concern ourselves with valid regions
@@ -263,13 +265,13 @@ namespace Segmentation {
 
         segmentation_cutoffs[0] = proposals.begin();
         segmentation_cutoffs[num_seg_levels] = proposals.end(); //store extra iterator to end of vector for simplicity
-        for (int i = 1; i < num_seg_levels; ++i) {
+        for (unsigned int i = 1; i < num_seg_levels; ++i) {
             segmentation_cutoffs[i] = segmentation_cutoffs[i - 1];
             while (segmentation_cutoffs[i] != proposals.end() && segmentation_cutoffs[i]->seg_level < i)
                 ++segmentation_cutoffs[i]; //store location where next segmentations can be found in proposals
         }
 
-        for (int i = 0; i < num_seg_levels; ++i) {
+        for (unsigned int i = 0; i < num_seg_levels; ++i) {
             //go through each significant region that could be merged
             for (std::vector<RegionProposal>::iterator region_to_merge = segmentation_cutoffs[i]; region_to_merge != segmentation_cutoffs[i + 1]; ++region_to_merge) {
                 if (region_to_merge->score < min_score)
@@ -277,7 +279,7 @@ namespace Segmentation {
                 if (!region_to_merge->isValid())
                     continue; //region has already been merged
 
-                for (int j = 0; j < num_seg_levels; ++j) {
+                for (unsigned int j = 0; j < num_seg_levels; ++j) {
                     if (j == i)
                         continue; //skip checking regions in same segmentation level
 
@@ -344,7 +346,7 @@ namespace Segmentation {
             weights[i] = 1 / (1 + std::exp(-i)); //weight per segmentation level.
 
         for (const std::vector< std::vector<cv::Rect> > &regions_domain : regions_img) { //iterate through each domain
-            for (int s = 0; s < regions_domain.size(); ++s) {
+            for (unsigned int s = 0; s < regions_domain.size(); ++s) {
                 for (const cv::Rect &region : regions_domain[s]) {
                     bool merged = false;
 
@@ -366,8 +368,8 @@ namespace Segmentation {
         bool merged = true;
         while (merged) {
             merged = false;
-            for (int i = first_valid; i < regions_significant.size() - 1; ++i) {
-                for (int j = i + 1; j < regions_significant.size(); ++j) {
+            for (unsigned int i = first_valid; i < regions_significant.size() - 1; ++i) {
+                for (unsigned int j = i + 1; j < regions_significant.size(); ++j) {
                     if (float((regions_significant[i].first & regions_significant[j].first).area()) / (regions_significant[i].first | regions_significant[j].first).area() >= IOU_tresh) {
 
                         regions_significant[j].first |= regions_significant[i].first;

@@ -41,8 +41,9 @@ SET(DARKNET_LIBS DARKNET_LIBRARY)
 ##source files
 SET(SRC_HELPER "${PROJECT_SOURCE_DIR}/src/functions.cpp")
 SET(SRC_SEGMENTATION "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
-SET(SRC_SEGMENTATION_CV "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp" )
+SET(SRC_SEGMENTATION_CV "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
 SET(SRC_SALIENCY "${PROJECT_SOURCE_DIR}/src/saliency/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/SaliencyAnalyzer.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/LineDescriptor.cpp")
+SET(SRC_YOLO "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
 
 #create various executables
 #ADD_EXECUTABLE(old_regions "${PROJECT_SOURCE_DIR}/src/old/regions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
@@ -51,12 +52,13 @@ SET(SRC_SALIENCY "${PROJECT_SOURCE_DIR}/src/saliency/saliency.cpp" "${PROJECT_SO
 #ADD_EXECUTABLE(old_contours "${PROJECT_SOURCE_DIR}/src/old/contours.cpp")
 
 #ADD_EXECUTABLE(yolo_visualization "${PROJECT_SOURCE_DIR}/src/yoloInterface/visualization.cpp")
-#ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
+#ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" ${SRC_HELPER} ${SRC_YOLO})
+ADD_EXECUTABLE(yolo_comparison "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloComparator.cpp" ${SRC_HELPER} ${SRC_YOLO} ${SRC_SEGMENTATION}  ${SRC_SALIENCY})
 
 #ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/webCam.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
-ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_HELPER} ${SRC_SALIENCY})
+#ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_HELPER} ${SRC_SALIENCY})
 #ADD_EXECUTABLE(fly_capture_camera_detailed "${PROJECT_SOURCE_DIR}/src/flyCameraDetailed.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
-ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/video.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
+#ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/video.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 
 #ADD_EXECUTABLE(cv_segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMainCV.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
 ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
@@ -73,11 +75,12 @@ ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SR
 
 #TARGET_LINK_LIBRARIES(yolo_visualization ${OpenCV_LIBS})
 #TARGET_LINK_LIBRARIES(yolo ${OpenCV_LIBS} ${DARKNET_LIBS})
+TARGET_LINK_LIBRARIES(yolo_comparison ${OpenCV_LIBS} ${DARKNET_LIBS})
 
 #TARGET_LINK_LIBRARIES(webcam ${OpenCV_LIBS} ${DARKNET_LIBS})
-TARGET_LINK_LIBRARIES(fly_capture_camera ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
+#TARGET_LINK_LIBRARIES(fly_capture_camera ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
 #TARGET_LINK_LIBRARIES(fly_capture_camera_detailed ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
-TARGET_LINK_LIBRARIES(video ${OpenCV_LIBS} ${DARKNET_LIBS})
+#TARGET_LINK_LIBRARIES(video ${OpenCV_LIBS} ${DARKNET_LIBS})
 
 #TARGET_LINK_LIBRARIES(cv_segmentation ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(segmentation ${OpenCV_LIBS})

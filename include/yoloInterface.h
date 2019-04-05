@@ -14,7 +14,7 @@ public:
     YoloInterface(const std::string &config_file, const std::string &weights_file, const std::string &class_labels_file, float thresh = 0.5);
     ~YoloInterface(void);
 
-    //Class is not meant to be copied or moved
+    //class is not meant to be copied or moved
     YoloInterface(const YoloInterface&) = delete;
     YoloInterface(YoloInterface&&) = delete;
     YoloInterface& operator=(const YoloInterface&) = delete;
@@ -23,6 +23,8 @@ public:
     void setThresholds(float threshold = 0.5, float threshold_hier = 0.5);
 
     std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > processImage(const cv::Mat &img);
+
+    void sortPredictionsByObjectness(std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions);
 
     static cv::Mat getPredictionsDisplayable(const cv::Mat &img, const std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions);
 

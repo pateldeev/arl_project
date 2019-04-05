@@ -39,7 +39,9 @@ namespace SaliencyFilter {
 
         void visualizeDescriptor(const cv::Mat &saliency_map) const;
 
-        int computeOptimalChange(float expansion_thresh, float compression_thresh) const;
+        int computeOptimalChange(void) const;
+
+        bool hasPointOfInflection(void) const;
 
     private:
         cv::Point m_start;
@@ -48,7 +50,8 @@ namespace SaliencyFilter {
 
         float *m_data;
         float *m_derivative;
-        float *m_second_derivative;
+        float m_derivative_avg;
+        float *m_derivative_2;
         int m_size;
         int m_min;
         int m_max;

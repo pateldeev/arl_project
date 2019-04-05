@@ -156,36 +156,34 @@ namespace SaliencyFilter {
             edges_order[3] = RECT_SIDES::RIGHT;
         }
 
-        float expansion_thresh = avg_sal + 0.5 * std_saliency_map, compression_thresh = avg_sal - 0.5 * std_saliency_map;
-
-        for (int i = 0; i < 4; ++i) {
-            std::cout << std::endl << compression_thresh << "|" << avg_sal << "|" << expansion_thresh << "|||" << box << "|||" << box_sal << std::endl;
+        for (unsigned int i = 0; i < 2; ++i) {
             computeDescriptorAlongSingleEdge(edges_order[i], saliency_map);
-            edges[edges_order[i]].visualizeDescriptor(img);
-            optimal_changes[edges_order[i]] = edges[edges_order[i]].computeOptimalChange(expansion_thresh, compression_thresh);
-            std::cout << "Optimal Change: " << optimal_changes[edges_order[i]] << std::endl;
-            CV_Assert(cv::waitKey() != 'q');
-        }
 
-        for (int i = 0; i < 4; ++i) {
+            std::cout << std::endl << "Calling visualization |" << avg_sal << "|" << std_sal << "| Surrounding |" << avg_sal_double << "|" << std_sal_double << std::endl;
+            edges[edges_order[i]].visualizeDescriptor(img);
+            //CV_Assert(cv::waitKey() != 'q');
+
+            optimal_changes[edges_order[i]] = edges[edges_order[i]].computeOptimalChange();
             resizeBoxEdge(edges_order[i], optimal_changes[edges_order[i]]);
         }
 
-#if 0
-        for (int i = 0; i < 4; ++i) {
-            float expansion_thresh = avg_sal + 0.5 * std_sal, compression_thresh = avg_sal - 0.5 * std_sal;
-            std::cout << std::endl << compression_thresh << "|" << avg_sal << "|" << expansion_thresh << std::endl;
+        for (unsigned int i = 2; i < 4; ++i) {
+            computeDescriptorAlongSingleEdge(edges_order[i], saliency_map);
+
+            std::cout << std::endl << "Calling visualization |" << avg_sal << "|" << std_sal << "| Surrounding |" << avg_sal_double << "|" << std_sal_double << std::endl;
             edges[edges_order[i]].visualizeDescriptor(img);
-            int optimal_change = edges[edges_order[i]].computeOptimalChange(expansion_thresh, compression_thresh);
-            std::cout << "Optimal Change: " << optimal_change << std::endl;
-            CV_Assert(cv::waitKey() != 'q');
+            //CV_Assert(cv::waitKey() != 'q');
+
+            optimal_changes[edges_order[i]] = edges[edges_order[i]].computeOptimalChange();
+            resizeBoxEdge(edges_order[i], optimal_changes[edges_order[i]]);
+
         }
-#else
+
+        //return;
         cv::Mat disp = img.clone();
         DrawBoundingBox(disp, box, cv::Scalar(0, 0, 255));
         DisplayImg(disp, "CHANGED");
-        CV_Assert(cv::waitKey() != 'q');
-#endif
+        //CV_Assert(cv::waitKey() != 'q');
     }
 
     void SaliencyAnalyzer::Region::computeDescriptorAlongSingleEdge(RECT_SIDES side, const cv::Mat &saliency_map) {

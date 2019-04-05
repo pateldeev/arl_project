@@ -28,39 +28,16 @@ int main(int argc, char * argv[]) {
     //const cv::Mat img = cv::imread("/home/dp/Downloads/IMG_0834.jpeg");
     cv::Mat img;
     std::srand(std::time(0));
-#if 1
+#if 0
     const char file_name_format[] = "/home/dp/Downloads/data_cumulative/%d.png";
     char file_name[100];
     int file_count = 0;
     const int file_count_max = 18;
 #else
-    const char file_name_format[] = "/home/dp/Downloads/data_mine/%d.jpg";
+    const char file_name_format[] = "/home/dp/Downloads/data_mine/%d.png";
     char file_name[100];
     int file_count = 0;
-    const int file_count_max = 10;
-#endif
-
-#if 0
-    cv::Mat test = cv::Mat::zeros(5, 5, CV_8UC1);
-    int cnt = 0;
-    for (int r = 0; r < test.rows; ++r)
-        for (int c = 0; c < test.cols; ++c)
-            test.at<char>(r, c) = ++cnt;
-
-    std::cout << std::endl << cv::sum(test)[0] << "|Avg|" << cv::mean(test)[0] << std::endl;
-
-
-
-    std::cout << test << std::endl;
-
-    cv::Rect region(cv::Point(1, 1), cv::Point(3, 4));
-    cv::Mat test_region = test(region);
-    for (int r = 0; r < test_region.rows; ++r)
-        for (int c = 0; c < test_region.cols; ++c)
-            test_region.at<char>(r, c) = 0;
-
-    std::cout << test << std::endl << std::endl << region << std::endl;
-    return 0;
+    const int file_count_max = 20;
 #endif
 
     int key = 0;

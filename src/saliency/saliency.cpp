@@ -18,7 +18,10 @@ namespace SaliencyFilter {
         cv::normalize(img_saliency, disp_saliency, 0, 255, cv::NORM_MINMAX, CV_8UC1);
         cv::cvtColor(disp_saliency, disp_saliency, cv::COLOR_GRAY2BGR);
 
+        std::time_t segmentation_srand_time = std::time(0); //to have both displays show same colors
+        std::srand(segmentation_srand_time);
         Segmentation::showSegmentationResults(img, segmentation_regions, segmentation_scores, "segmentations");
+        std::srand(segmentation_srand_time);
         Segmentation::showSegmentationResults(disp_saliency, segmentation_regions, avg_saliency, "saliency_map");
     }
 
@@ -40,7 +43,7 @@ namespace SaliencyFilter {
         cv::Mat disp = img.clone();
         for (const cv::Rect &r : surviving_regions)
             DrawBoundingBox(disp, r, cv::Scalar(255, 0, 0));
-        DisplayImg(disp, "Surviving_Regions_");
+        DisplayImg(disp, "Surviving_Regions_Before_Resizing");
         surviving_regions.clear();
 
         saliency_analyzer.computeSaliencyDescriptors();
@@ -49,7 +52,7 @@ namespace SaliencyFilter {
         disp = img.clone();
         for (const cv::Rect &r : surviving_regions)
             DrawBoundingBox(disp, r, cv::Scalar(255, 0, 0));
-        DisplayImg(disp, "Surviving_Regions");
+        DisplayImg(disp, "Surviving_Regions_Final");
     }
 
     void calculateMeanSTD(const std::vector<float> &data, float &mean, float &stdeviation) {

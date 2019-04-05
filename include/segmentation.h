@@ -1,12 +1,12 @@
 #ifndef SEGMENTATION_H
 #define SEGMENTATION_H
 
-#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 
 namespace Segmentation {
 
     void process(const cv::Mat &img, std::vector<cv::Rect> &proposals, std::vector<float> &scores);
-    void showSegmentationResults(const cv::Mat &img, const std::vector<cv::Rect> &proposals, const std::vector<float> &scores, const std::string &window_name = "segmentation_results");
+    void showSegmentationResults(const cv::Mat &img, const std::vector<cv::Rect> &proposals, const std::vector<float> &scores, const std::string &window_name = "segmentation_results", unsigned int box_thickness = 1);
 
     struct RegionProposal;
 

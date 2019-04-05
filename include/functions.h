@@ -1,9 +1,7 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <opencv2/ximgproc/segmentation.hpp>
 
@@ -47,8 +45,8 @@ inline char UpdateImg(const cv::Mat &img, const std::string &windowName, const s
 
 //draw single bounding box
 
-inline void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 0), bool showCenter = false) {
-    cv::rectangle(img, rect.tl(), rect.br(), color);
+inline void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 0), bool showCenter = false, unsigned int thickness = 1) {
+    cv::rectangle(img, rect.tl(), rect.br(), color, thickness);
     if (showCenter)
         cv::drawMarker(img, (rect.tl() + rect.br()) / 2, color);
 }
@@ -147,7 +145,7 @@ inline void ShowManyImages(const std::string &windowName, const std::vector<cv::
 
         //calculate start position of next image
         tempW += imgTargetW;
-        if (tempW >= dispW) {
+        if (tempW >= dispW - imgTargetW + 1) {
             tempW = 0;
             tempH += imgTargetH;
         }
