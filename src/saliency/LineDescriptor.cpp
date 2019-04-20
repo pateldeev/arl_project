@@ -21,7 +21,7 @@ namespace SaliencyFilter {
         m_start = edge_start;
         m_horizontal = is_horizontal;
         m_length = edge_length;
-        CV_Assert(expansion_length_positive < std::abs(box_size) && expansion_length_negative < std::abs(box_size));
+        //CV_Assert(expansion_length_positive < std::abs(box_size) && expansion_length_negative < std::abs(box_size));
 
         if (!m_horizontal) { //line is vertical
             CV_Assert(m_start.x < saliency_map.cols && m_start.y + m_length < saliency_map.rows);
@@ -105,8 +105,9 @@ namespace SaliencyFilter {
 
     void LineDescriptor::resize(int min, int max) {
         CV_Assert(max >= 2 && min <= -2);
-        delete m_data;
-        delete m_derivative;
+        delete [] m_data;
+        delete [] m_derivative;
+        delete [] m_derivative_2;
         m_min = min, m_max = max;
         m_size = m_max - m_min + 1;
         m_data = new float[m_size];
@@ -160,6 +161,16 @@ namespace SaliencyFilter {
         std::cout << "Descriptor min|max: " << min_val << "(@" << min_pos << ")|" << max_val << "(@" << max_pos << ")" << std::endl;
         std::cout << "Optimal Change: " << optimal_change << std::endl;
 
+        int max_derivative_pos;
+        float max_derivative = 0.f;
+        for (int i = 1; i < m_size - 2; ++i) {
+            if (std::abs(m_derivative[i]) > max_derivative) {
+                max_derivative_pos = i;
+                max_derivative = std::abs(m_derivative[i]);
+            }
+        }
+        std::cout << "Max derivative: " << max_derivative << " at " << max_derivative_pos + m_min << std::endl;
+
         cv::Mat disp = saliency_map.clone();
         if (disp.type() == CV_8UC1)
             cv::cvtColor(disp, disp, cv::COLOR_GRAY2BGR);
@@ -167,41 +178,45 @@ namespace SaliencyFilter {
         cv::Point end = getEnd();
         cv::line(disp, m_start, end, cv::Scalar(255, 0, 0));
         if (m_horizontal) {
-            cv::line(disp, cv::Point(m_start.x, m_start.y + m_min), cv::Point(end.x, end.y + m_min), cv::Scalar(0, 0, 255));
-            cv::line(disp, cv::Point(m_start.x, m_start.y + m_max), cv::Point(end.x, end.y + m_max), cv::Scalar(0, 0, 255));
+            cv::line(disp, cv::Point(m_start.x, m_start.y + m_min), cv::Point(end.x, end.y + m_min), cv::Scalar(255, 0, 255));
+            cv::line(disp, cv::Point(m_start.x, m_start.y + m_max), cv::Point(end.x, end.y + m_max), cv::Scalar(255, 0, 255));
 
-            cv::line(disp, cv::Point(m_start.x, m_start.y + optimal_change), cv::Point(end.x, end.y + optimal_change), cv::Scalar(255, 0, 255));
+            cv::line(disp, cv::Point(m_start.x, m_start.y + optimal_change), cv::Point(end.x, end.y + optimal_change), cv::Scalar(0, 0, 255));
         } else {
-            cv::line(disp, cv::Point(m_start.x + m_min, m_start.y), cv::Point(end.x + m_min, end.y), cv::Scalar(0, 0, 255));
-            cv::line(disp, cv::Point(m_start.x + m_max, m_start.y), cv::Point(end.x + m_max, end.y), cv::Scalar(0, 0, 255));
+            cv::line(disp, cv::Point(m_start.x + m_min, m_start.y), cv::Point(end.x + m_min, end.y), cv::Scalar(255, 0, 255));
+            cv::line(disp, cv::Point(m_start.x + m_max, m_start.y), cv::Point(end.x + m_max, end.y), cv::Scalar(255, 0, 255));
 
-            cv::line(disp, cv::Point(m_start.x + optimal_change, m_start.y), cv::Point(end.x + optimal_change, end.y), cv::Scalar(255, 0, 255));
+            cv::line(disp, cv::Point(m_start.x + optimal_change, m_start.y), cv::Point(end.x + optimal_change, end.y), cv::Scalar(0, 0, 255));
         }
-        DisplayImg(disp, "Descriptor_Line");
+        DisplayImg(disp, "Descriptor_Line|R-optimal");
 
-        cv::Mat descriptor_function(100, m_max - m_min + 1, CV_8UC1, cv::Scalar(0, 0, 0));
+        cv::Mat descriptor_function = cv::Mat::zeros(500, 5 * (m_max - m_min + 1), CV_8UC3);
         for (int r = 0; r < descriptor_function.rows; ++r) {
-            descriptor_function.at<uint8_t>(r, 0 - m_min) = 150;
-            descriptor_function.at<uint8_t>(r, 0 - m_min + optimal_change) = 100;
+            descriptor_function(cv::Rect(5 * -m_min, 0, 5, descriptor_function.rows)).setTo(cv::Vec3b(0, 255, 0));
+            descriptor_function(cv::Rect(5 * (-m_min + optimal_change), 0, 5, descriptor_function.rows)).setTo(cv::Vec3b(0, 0, 255));
+            //descriptor_function.at<cv::Vec3b>(r, 0 - m_min) = cv::Vec3b(0, 255, 0);
+            //descriptor_function.at<cv::Vec3b>(r, 0 - m_min + optimal_change) = cv::Vec3b(0, 0, 255);
         }
         float value;
         int sub;
         for (int i = 0; i < m_size; ++i) {
-            value = (m_data[i] - min_val) / (max_val - min_val) * 80 + 10;
-            sub = 1;
-            for (int r = 0; r < value && sub <= descriptor_function.rows; ++r, ++sub)
-                descriptor_function.at<uint8_t>(descriptor_function.rows - sub, i) = 255;
+            value = (m_data[i] - min_val) / (max_val - min_val) * 400 + 50;
+            descriptor_function(cv::Rect(5 * i, descriptor_function.rows - 1 - value, 5, value)).setTo(cv::Vec3b(255, 255, 255));
+            //sub = 1;
+            //for (int r = 0; r < value && sub <= descriptor_function.rows; ++r, ++sub)
+            //descriptor_function.at<cv::Vec3b>(descriptor_function.rows - sub, i) = cv::Vec3b(255, 255, 255);
         }
         if (min_pos < max_pos) {
-            WriteText(descriptor_function, std::to_string(int(m_data[0])), 0.3, cv::Scalar(0, 0, 0), cv::Point(1, 92));
-            WriteText(descriptor_function, std::to_string(int(m_data[m_size - 1])), 0.3, cv::Scalar(255, 0, 0), cv::Point(0.7 * descriptor_function.cols, 8));
+            WriteText(descriptor_function, std::to_string(int(m_data[0])), 0.8, cv::Scalar(255, 0, 0), cv::Point(5, descriptor_function.rows - 25));
+            WriteText(descriptor_function, std::to_string(int(m_data[m_size - 1])), 0.8, cv::Scalar(255, 0, 0), cv::Point(descriptor_function.cols - 100, 25));
         } else {
-            WriteText(descriptor_function, std::to_string(int(m_data[0])), 0.3, cv::Scalar(255, 0, 0), cv::Point(1, 8));
-            WriteText(descriptor_function, std::to_string(int(m_data[m_size - 1])), 0.3, cv::Scalar(0, 0, 0), cv::Point(0.7 * descriptor_function.cols, 92));
+            WriteText(descriptor_function, std::to_string(int(m_data[0])), 0.8, cv::Scalar(255, 0, 0), cv::Point(5, 25));
+            WriteText(descriptor_function, std::to_string(int(m_data[m_size - 1])), 0.8, cv::Scalar(255, 0, 0), cv::Point(descriptor_function.cols - 100, descriptor_function.rows - 25));
         }
-        DisplayImg(descriptor_function, "Descriptor_Values");
+        DisplayImg(descriptor_function, "Descriptor_Values|G-start|R-optimal");
 
         std::cout << "Derivative 1 avg: " << m_derivative_avg << std::endl;
+
         for (int i = 0; i < m_size; ++i)
             std::cout << "   " << std::right << std::setw(3) << (i + m_min) << ": " << std::right << std::setw(10) << m_data[i] << "   |Diff: " << std::right << std::setw(10) << m_derivative[i] << "   |Diff2: " << m_derivative_2[i] << std::endl;
     }
@@ -224,6 +239,7 @@ namespace SaliencyFilter {
         if (m_derivative_avg < 0) { //decrease to encapsulate more information
             while (m_derivative[--optimal_pos] < m_derivative_avg);
         } else { //increase to encapsulate more information
+
             while (m_derivative[++optimal_pos] > m_derivative_avg);
         }
 

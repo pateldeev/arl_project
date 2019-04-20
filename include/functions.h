@@ -8,218 +8,232 @@
 #include <opencv2/saliency/saliencyBaseClasses.hpp>
 #include <opencv2/saliency/saliencySpecializedClasses.hpp>
 
-void RegionProposalsGraph(const cv::Mat &segmentedImg, std::vector<cv::Rect> &regions);
-void RegionProposalsSelectiveSearch(const cv::Mat &img, std::vector<cv::Rect> &regions, const int resizeHeight = 200);
-void RegionProposalsContour(const cv::Mat &img, std::vector<cv::Rect> &regions, const float thresh = 100);
+cv::Mat GetSubRegionOfMat(const cv::Mat &m, const cv::Rect &r);
 
-void CalculateSaliceny(const cv::Mat &img, cv::Mat &saliencyMat, bool useFineGrained = true);
+char DisplayImg(const cv::Mat &img, const std::string &window_name, int width = 1200, int height = 1200, bool wait = false);
+char DisplayImg(const std::string &window_name, const cv::Mat &img, int width = 1200, int height = 1200, bool wait = false);
+void DisplayMultipleImages(const std::string &window_name, const std::vector<cv::Mat> &images, unsigned int rows = 2, unsigned int cols = 5, const cv::Size &display_size = cv::Size(1800, 1000), bool wait = false);
+char UpdateImg(const cv::Mat &img, const std::string &window_name, const std::string &window_title = "", bool wait = false);
 
-void RemoveUnsalient(const cv::Mat &salientImg, const std::vector<cv::Rect> &regions, std::vector<cv::Rect> &highest, const int keepNum = 7);
+void CreateThresholdImageWindow(const cv::Mat &img, const std::string &window_name_main = "Thresholding");
+void ShowHistrogram(const cv::Mat &img, const std::string &window_name = "Histogram");
 
-void RemoveOverlapping(std::vector<cv::Rect> &regions, float minOveralap = 0.85);
+void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 0), bool show_center = false, unsigned int thickness = 1);
+void DrawBoundingBoxes(cv::Mat &img, const std::vector<cv::Rect> &regions, const cv::Scalar &color = cv::Scalar(0, 255, 0));
+void DisplayBoundingBoxesInteractive(const cv::Mat &img, const std::vector<cv::Rect> &regions, const std::string &window_name = "Inteactive_Regions", const unsigned int increment = 50);
+
+void WriteText(cv::Mat &img, const std::string &text, float font_size = 0.75, const cv::Scalar &font_color = cv::Scalar(0, 0, 255), const cv::Point &pos = cv::Point(10, 25));
+void WriteText(cv::Mat &img, const std::vector<std::string> &text, float font_size = 0.75, const cv::Scalar &font_color = cv::Scalar(0, 0, 255), const cv::Point &start_pos = cv::Point(10, 25), const cv::Point &change_per_line = cv::Point(0, 25));
+
+cv::Mat GetGraphSegmentationViewable(const cv::Mat &img_segmented, bool disp_count = false);
+
+void DrawGridLines(cv::Mat &img, int num_grids, const cv::Scalar &grid_color = cv::Scalar(255, 255, 255));
+
+float CalcSpatialEntropy(const cv::Mat &img, const cv::Rect &region, const cv::Rect &region_blackout);
+float CalcSpatialEntropy(const cv::Mat &img, const cv::Rect &region);
+float CalcSpatialEntropy(const cv::Mat &img);
+
+inline void RegionProposalsGraph(const cv::Mat &segmented_img, std::vector<cv::Rect> &regions) {
+    regions.clear();
+
+    double min, max;
+    cv::minMaxLoc(segmented_img, &min, &max);
+    regions.resize(int(max) + 1);
+
+    for (int r = 0; r < segmented_img.rows; ++r) {
+        for (int c = 0; c < segmented_img.cols; ++c) {
+            uint32_t segment = segmented_img.at<uint32_t>(r, c);
+
+            if (!regions[segment].contains(cv::Point(r, c))) {
+                if (regions[segment].tl() == regions[segment].br() && regions[segment].tl().x == 0 && regions[segment].tl().y == 0) {
+                    regions[segment] = cv::Rect(cv::Point(c, r), cv::Point(c, r));
+                } else {
+                    if (c < regions[segment].tl().x) {
+                        if (r < regions[segment].tl().y)
+                            regions[segment] = cv::Rect(cv::Point(c, r), regions[segment].br());
+                        else if (r < regions[segment].br().y)
+                            regions[segment] = cv::Rect(cv::Point(c, regions[segment].tl().y), regions[segment].br());
+                        else
+                            regions[segment] = cv::Rect(cv::Point(c, regions[segment].tl().y), cv::Point(regions[segment].br().x, r));
+                    } else if (c < regions[segment].br().x) {
+                        if (r < regions[segment].tl().y)
+                            regions[segment] = cv::Rect(cv::Point(regions[segment].tl().x, r), regions[segment].br());
+                        else if (r > regions[segment].y)
+                            regions[segment] = cv::Rect(regions[segment].tl(), cv::Point(regions[segment].br().x, r));
+                    } else {
+                        if (r < regions[segment].tl().y)
+                            regions[segment] = cv::Rect(cv::Point(regions[segment].tl().x, r), cv::Point(c, regions[segment].br().y));
+                        else if (r < regions[segment].br().y)
+                            regions[segment] = cv::Rect(regions[segment].tl(), cv::Point(c, regions[segment].br().y));
+                        else
+                            regions[segment] = cv::Rect(regions[segment].tl(), cv::Point(c, r));
+                    }
+                }
+            }
+        }
+    }
+}
+
+inline void RegionProposalsSelectiveSearch(const cv::Mat &img, std::vector<cv::Rect> &regions, const int resize_h = 200) {
+    regions.clear();
+
+    const int old_h = img.rows;
+    const int old_w = img.cols;
+    const int resize_w = old_w * resize_h / old_h;
+    cv::Mat img_resized;
+    cv::resize(img, img_resized, cv::Size(resize_w, resize_h));
+
+    // speed-up using multithreads
+    //cv::setUseOptimized(true);
+    //cv::setNumThreads(8);
+
+    // create Selective Search Segmentation Object using default parameters
+    cv::Ptr<cv::ximgproc::segmentation::SelectiveSearchSegmentation> ss = cv::ximgproc::segmentation::createSelectiveSearchSegmentation();
+
+    ss->setBaseImage(img_resized); // set input image on which we will run segmentation
+
+    ss->switchToSelectiveSearchQuality(); // change to high quality
+
+    //run selective search segmentation on input image
+    std::vector<cv::Rect> regions_resized;
+
+    std::chrono::high_resolution_clock::time_point t1, t2;
+    t1 = std::chrono::high_resolution_clock::now();
+
+    ss->process(regions_resized);
+
+    t2 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+    // rescale rectangles back for original image
+    for (const cv::Rect & rec : regions_resized) {
+        int x = old_w * ((double) rec.x / resize_w);
+        int y = old_h * ((double) rec.y / resize_h);
+        int width = ((double) rec.width / resize_w) * old_w;
+        int height = ((double) rec.height / resize_h) * old_h;
+
+        regions.push_back(cv::Rect(x, y, width, height));
+    }
+
+    std::cout << std::endl << "Region Proposals - Selective Search Segmentation: " << regions.size() << std::endl << "Time: " << duration;
+}
+
+inline void RegionProposalsContour(const cv::Mat &img, std::vector<cv::Rect> &regions, const float thresh = 100) {
+    regions.clear();
+
+    cv::Mat img_gray;
+    cv::cvtColor(img, img_gray, cv::COLOR_BGR2GRAY);
+    cv::blur(img_gray, img_gray, cv::Size(3, 3));
+
+    cv::Mat thresh_output;
+    std::vector<std::vector<cv::Point> > contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::threshold(img_gray, thresh_output, thresh, 255, cv::THRESH_BINARY);
+    cv::findContours(thresh_output, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+
+    std::vector<std::vector < cv::Point >> contours_poly(contours.size());
+    regions.resize(contours.size());
+
+    for (unsigned int i = 0; i < contours.size(); ++i) {
+        cv::approxPolyDP(cv::Mat(contours[i]), contours_poly[i], 3, true);
+        regions[i] = cv::boundingRect(cv::Mat(contours_poly[i]));
+    }
+}
+
+inline void CalculateSaliceny(const cv::Mat &img, cv::Mat &saliency_map, bool use_fine_grained = true) {
+    if (use_fine_grained) {
+        cv::Ptr<cv::saliency::StaticSaliencyFineGrained> saliency = cv::saliency::StaticSaliencyFineGrained::create();
+        saliency->computeSaliency(img, saliency_map);
+    } else {
+        cv::Ptr<cv::saliency::StaticSaliencySpectralResidual> saliency = cv::saliency::StaticSaliencySpectralResidual::create();
+        saliency->computeSaliency(img, saliency_map);
+        cv::normalize(saliency_map, saliency_map, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    }
+}
+
+inline float AvgSaliency(const cv::Mat &saliency_map, const cv::Rect & region) {
+    int sum = 0, count = 0;
+    for (int row = region.y; row < region.y + region.height; ++row)
+        for (int col = region.x; col < region.x + region.width; ++col, ++count)
+            sum += saliency_map.at<uint8_t>(row, col);
+    return ((float) sum / count);
+}
+
+inline float NumSaliency(const cv::Mat &saliency_map, const cv::Rect & region) {
+    int salient = 0, total = 0;
+    const int thresh = 120;
+    for (int row = region.y; row < region.y + region.height; ++row) {
+        for (int col = region.x; col < region.x + region.width; ++col) {
+            ++total;
+            if (saliency_map.at<uint8_t>(row, col) > thresh)
+                ++salient;
+        }
+    }
+
+    return ((float) salient / total);
+}
+
+struct region {
+    unsigned int m_index;
+    float m_data;
+
+    region(unsigned int index, float data) : m_index(index), m_data(data) {
+    }
+
+    bool operator<(const region & other) const {
+        return m_data < other.m_data;
+    }
+};
+
+inline void RemoveUnsalient(const cv::Mat &saliency_map, const std::vector<cv::Rect> &regions, std::vector<cv::Rect> &highest, const int keep_num = 7) {
+    CV_Assert(regions.size() >= keep_num);
+    CV_Assert(saliency_map.type() == CV_8UC1);
+    highest.resize(keep_num);
+
+    std::multiset<region> orderedRegions;
+
+    for (unsigned int i = 0; i < regions.size(); ++i)
+        orderedRegions.insert(region(i, NumSaliency(saliency_map, regions[i])));
+
+    std::multiset<region>::reverse_iterator rit = orderedRegions.rbegin();
+    for (unsigned int i = 0; i < keep_num; ++i, ++rit)
+        highest[i] = regions[rit->m_index];
+}
+
+inline void RemoveOverlapping(std::vector<cv::Rect> &regions, float min_overlap = 0.85) {
+    unsigned int size = regions.size();
+    cv::Rect overlap;
+    for (unsigned int i = 0; i < size; ++i) {
+        for (unsigned int j = i + 1; j < size; ++j) {
+            if (!regions[i].empty() && !regions[j].empty()) {
+                overlap = regions[i] & regions[j];
+                if (overlap.area() >= min_overlap * regions[i].area() && overlap.area() >= min_overlap * regions[j].area()) {
+                    regions.push_back(regions[i] | regions[j]);
+                    regions[i] = regions[j] = cv::Rect();
+                }
+            }
+        }
+    }
+
+    size = regions.size();
+    regions.erase(std::remove_if(regions.begin(), regions.end(),
+            [](const cv::Rect & rect)->bool {
+                return rect.empty(); }), regions.end());
+
+    if (size != regions.size())
+        RemoveOverlapping(regions, min_overlap);
+}
+
 
 // Counts number of regions that contain each pixel value
 // heatMap should be a CV_16UC1 image of all zeros of the correct size 
-void CreateHeatMap(const std::vector<cv::Rect> &regions, cv::Mat &heatMap);
 
-inline cv::Mat GetSubRegionOfMat(const cv::Mat &m, const cv::Rect &r) {
-    return m(cv::Range(r.tl().y, r.br().y + 1), cv::Range(r.tl().x, r.br().x + 1));
+inline void CreateHeatMap(const std::vector<cv::Rect> &regions, cv::Mat & heat_map) {
+    CV_Assert(heat_map.type() == CV_16UC1);
+
+    for (const cv::Rect & r : regions)
+        for (int y = r.tl().y; y < r.br().y; ++y)
+            for (int x = r.tl().x; x < r.br().x; ++x)
+                ++heat_map.at<uint16_t>(y, x);
 }
-
-inline char DisplayImg(const cv::Mat &img, const std::string &windowName, int width = 1200, int height = 1200, bool wait = false) {
-    cv::namedWindow(windowName, cv::WINDOW_NORMAL);
-    cv::resizeWindow(windowName, width, height);
-    cv::imshow(windowName, img);
-    return (wait) ? cv::waitKey() : 0;
-}
-
-inline char DisplayImg(const std::string &windowName, const cv::Mat &img, int width = 1200, int height = 1200, bool wait = false) {
-    return DisplayImg(img, windowName, width, height, wait);
-}
-
-inline char UpdateImg(const cv::Mat &img, const std::string &windowName, const std::string &windowTitle = "", bool wait = false) {
-    cv::imshow(windowName, img);
-    if (*windowTitle.c_str())
-        cv::setWindowTitle(windowName, windowTitle);
-}
-
-//draw single bounding box
-
-inline void DrawBoundingBox(cv::Mat &img, const cv::Rect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 0), bool showCenter = false, unsigned int thickness = 1) {
-    cv::rectangle(img, rect.tl(), rect.br(), color, thickness);
-    if (showCenter)
-        cv::drawMarker(img, (rect.tl() + rect.br()) / 2, color);
-}
-
-
-//draw multiple bounding boxes
-
-inline void DrawBoundingBoxes(cv::Mat &img, const std::vector<cv::Rect> &regions, const cv::Scalar &color = cv::Scalar(0, 255, 0)) {
-    for (const cv::Rect & rect : regions)
-        cv::rectangle(img, rect.tl(), rect.br(), color);
-}
-
-//make sure grid lines fit evenly for optimal behavior
-
-inline void DrawGridLines(cv::Mat &img, int numGrids, const cv::Scalar &gridColor = cv::Scalar(255, 255, 255)) {
-    const int gridSizeR = img.rows / numGrids;
-    const int gridSizeC = img.cols / numGrids;
-
-    for (int r = 0; r < img.rows; r += gridSizeR)
-        cv::line(img, cv::Point(r, 0), cv::Point(r, img.cols), gridColor);
-    for (int c = 0; c < img.cols; c += gridSizeC)
-        cv::line(img, cv::Point(0, c), cv::Point(img.rows, c), gridColor);
-}
-
-//make sure grid lines fit evenly for optimal behavior
-
-inline void DisplayBoundingBoxesInteractive(const cv::Mat &img, const std::vector<cv::Rect> &regions, const std::string &windowName = "Inteactive_Regions", const unsigned int increment = 50) {
-    cv::namedWindow(windowName, cv::WINDOW_NORMAL);
-    cv::resizeWindow(windowName, 1200, 1200);
-    unsigned int numRectsShown = increment; // number of region proposals to show
-
-    while (1) {
-        cv::Mat dispImg = img.clone();
-
-        //display only required number of proposals
-        for (unsigned int i = 0; i < regions.size(); ++i) {
-            if (i < numRectsShown)
-                cv::rectangle(dispImg, regions[i], cv::Scalar(0, 255, 0));
-            else
-                break;
-        }
-
-        DisplayImg(dispImg, windowName);
-
-        int k = cv::waitKey(); // record key press
-        if (k == 'm')
-            numRectsShown += increment; // increase total number of rectangles to show by increment
-        else if (k == 'l' && numRectsShown > increment)
-            numRectsShown -= increment; // decrease total number of rectangles to show by increment
-        else if (k == 'c')
-            return;
-    }
-}
-
-inline void WriteText(cv::Mat &img, const std::string &text, float font_size = 0.75, const cv::Scalar &font_color = cv::Scalar(0, 0, 255), const cv::Point &pos = cv::Point(10, 25)) {
-    cv::putText(img, text, pos, cv::FONT_HERSHEY_DUPLEX, font_size, font_color, 1.25);
-}
-
-inline void WriteText(cv::Mat &img, const std::vector<std::string> &text, float font_size = 0.75, const cv::Scalar &font_color = cv::Scalar(0, 0, 255), const cv::Point &start_pos = cv::Point(10, 25), const cv::Point &change_per_line = cv::Point(0, 25)) {
-    cv::Point pos = start_pos;
-    for (const std::string &t : text) {
-        WriteText(img, t, font_size, font_color, pos);
-        pos += change_per_line;
-    }
-}
-
-//show multiple CV_8UC1 or CV_8UC3 images in same window - doesn't check number of images provided to make sure it fits
-
-inline void ShowManyImages(const std::string &windowName, const std::vector<cv::Mat> &images, int numRows = 2, int numColumns = 5) {
-    const int dispW = 1800, dispH = 950; //size of collective image
-    cv::Mat dispImg = cv::Mat::zeros(dispH, dispW, CV_8UC3);
-    const int imgTargetW = dispW / numColumns, imgTargetH = dispH / numRows; //target size of each small subimage
-
-    int tempW = 0, tempH = 0; //used to keep track of top left corner of each subimage
-    cv::Mat imgResized;
-
-    for (const cv::Mat & img : images) {
-        CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC3);
-
-        int imgResizeByHeightW = img.cols * (float(imgTargetH) / img.rows);
-        int imgResizeByWidthH = img.rows * (float(imgTargetW) / img.cols);
-
-        if (imgResizeByHeightW <= imgTargetW) //rescale so height fits perfectly
-            cv::resize(img, imgResized, cv::Size(imgResizeByHeightW, imgTargetH));
-        else //rescale so width fits perfectly
-            cv::resize(img, imgResized, cv::Size(imgTargetW, imgResizeByWidthH));
-
-        //copy over relevant pixel values
-        for (unsigned int r = 0; r < imgResized.rows; ++r)
-            for (unsigned int c = 0; c < imgResized.cols; ++c) {
-                if (img.type() == CV_8UC3)
-                    dispImg.at<cv::Vec3b>(r + tempH, c + tempW) = imgResized.at<cv::Vec3b>(r, c);
-                else
-                    dispImg.at<cv::Vec3b>(r + tempH, c + tempW) = cv::Vec3b(imgResized.at<uint8_t>(r, c), imgResized.at<uint8_t>(r, c), imgResized.at<uint8_t>(r, c));
-            }
-
-        //calculate start position of next image
-        tempW += imgTargetW;
-        if (tempW >= dispW - imgTargetW + 1) {
-            tempW = 0;
-            tempH += imgTargetH;
-        }
-    }
-
-    DisplayImg(dispImg, windowName, dispW, dispH);
-}
-
-//returns viewable representation of graph segmentation
-
-inline cv::Mat GetGraphSegmentationViewable(const cv::Mat &imgSegmented, bool disp_count = false) {
-    CV_Assert(imgSegmented.type() == CV_32S);
-
-    double min, max;
-    cv::minMaxLoc(imgSegmented, &min, &max);
-
-    cv::Mat disp_img = cv::Mat::zeros(imgSegmented.rows, imgSegmented.cols, CV_8UC3);
-
-    const uint32_t * p;
-    uint8_t * p2;
-
-    //helper function to determine color
-    auto color_mapping = [](int segment_id) -> cv::Scalar {
-        double base = double(segment_id) * 0.618033988749895 + 0.24443434;
-        cv::Scalar c(std::fmod(base, 1.2), 0.95, 0.80);
-        cv::Mat in(1, 1, CV_32FC3), out(1, 1, CV_32FC3);
-
-        float * p = in.ptr<float>(0);
-        p[0] = float(c[0]) * 360.0f;
-        p[1] = float(c[1]);
-        p[2] = float(c[2]);
-
-        cv::cvtColor(in, out, cv::COLOR_HSV2RGB);
-        cv::Scalar t;
-        cv::Vec3f p2 = out.at<cv::Vec3f>(0, 0);
-
-        t[0] = int(p2[0] * 255);
-        t[1] = int(p2[1] * 255);
-        t[2] = int(p2[2] * 255);
-
-        return t;
-    };
-
-    for (int i = 0; i < imgSegmented.rows; ++i) {
-        p = imgSegmented.ptr<uint32_t>(i);
-        p2 = disp_img.ptr<uint8_t>(i);
-
-        for (int j = 0; j < imgSegmented.cols; ++j) {
-            cv::Scalar color = color_mapping(int(p[j]));
-            p2[j * 3] = (uint8_t) color[0];
-            p2[j * 3 + 1] = (uint8_t) color[1];
-            p2[j * 3 + 2] = (uint8_t) color[2];
-        }
-    }
-
-    if (disp_count)
-        WriteText(disp_img, std::to_string(int(max + 1)));
-
-    return disp_img;
-}
-
-#if 0
-
-inline void viewMostCommonCommon(const std::vector<cv::Rect> &regions, cv::Mat &output) {
-    assert(output.type() == CV_16UC1);
-    cv::Mat tempSubMat;
-    for (const cv::Rect & tempRegion : regions) {
-        tempSubMat = output(tempRegion);
-        tempSubMat.forEach<uint16_t>([](uint16_t & val, const int *) -> void {
-            ++val;
-        });
-    }
-    cv::normalize(output, output, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-}
-#endif
-
 #endif

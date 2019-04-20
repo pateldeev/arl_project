@@ -12,17 +12,15 @@ namespace Segmentation {
 
     //6 Domains [BGR, HSV, LAB, I, RGI, YUV]
     void getDomains(const cv::Mat &img, std::vector<cv::Mat> &img_domains, int resize_h = 200);
-    void getSegmentations(const std::vector<cv::Mat> &img_domains, std::vector< std::vector<cv::Mat> > &segmentations, const std::vector<float> &k_vals, float sigma = 0.8);
+    void getSegmentations(const std::vector<cv::Mat> &img_domains, std::vector< std::vector<cv::Mat> > &segmentations, unsigned int seg_levels = 5);
     void getBoundingBoxes(const cv::Mat &img_seg, std::vector<cv::Rect> &boxes, float max_region_size = 0.5);
 
     void generateRegionProposals(const std::vector< std::vector<cv::Mat> > &segmentations, std::vector<RegionProposal> &proposals, float max_region_size = 0.5);
-    void mergeProposalsWithinSegmentationLevel(std::vector<RegionProposal> &proposals, float IOU_thresh = 0.92);
-    void mergeProposalsBetweenSegmentationLevels(std::vector<RegionProposal> &proposals, float min_score = 1.f, float IOU_thresh = 0.95);
+    void mergeProposalsWithinSegmentationLevel(std::vector<RegionProposal> &proposals, float IOU_thresh = 0.95, float IU_diff_percentage = 0.005);
+    void mergeProposalsBetweenSegmentationLevels(std::vector<RegionProposal> &proposals, float min_score = 1.f, float IOU_thresh = 0.95, float IU_diff_percentage = 0.005);
+    void mergeProposalsCommonThroughoutDomain(std::vector<RegionProposal> &proposals, float IOU_thresh = 0.95, float IU_diff_percentage = 0.0075, unsigned int num_segmentations_levels = 5);
     void getSignificantMergedRegions(const std::vector<RegionProposal> &proposals, std::vector<cv::Rect> &signficiant_regions, std::vector<float> &sigificant_region_scores);
     void resizeRegions(std::vector<cv::Rect> &regions, int original_w, int original_h, int resize_w, int resize_h);
-
-    //old methodology
-    void calculateSignificantRegions(const std::vector< std::vector< std::vector<cv::Rect> > > &regions_img, std::vector< std::pair<cv::Rect, float> > &regions_significant, float IOU_thresh = 0.9);
 
     struct RegionProposal {
 
@@ -32,13 +30,15 @@ namespace Segmentation {
         cv::Rect box;
         float score;
         int domain;
-        int seg_level;
+        int seg_level; //-1->between segmentation and domain; -2->only between segmentation
         int status; //1->valid & unmerged; 2->valid & merged; 0->invalid
 
         //returns true is successful
 
-        bool tryMerge(RegionProposal &other, float IOU_thresh) {
-            if (float((box & other.box).area()) / (box | other.box).area() >= IOU_thresh) { //merge successful  
+        bool tryMerge(RegionProposal &other, float IOU_thresh, float IU_diff_percentage) {
+            float I = (box & other.box).area();
+            float U = (box | other.box).area();
+            if (I / U >= IOU_thresh || (U - I) <= IU_diff_percentage * RegionProposal::img_area) { //merge successful  
                 box |= other.box;
                 score += other.score;
 
@@ -51,6 +51,7 @@ namespace Segmentation {
                 //update status showing merge
                 other.status = 0;
                 status = 2;
+
                 return true; //merged
             }
             return false; //not merged
@@ -60,7 +61,7 @@ namespace Segmentation {
             return status > 0;
         }
 
-        bool containsMerged(void) const {
+        bool hasMerged(void) const {
             return status == 2;
         }
 
@@ -74,7 +75,25 @@ namespace Segmentation {
         }
 
         static float total_merge_scores;
+        static int img_area;
+
+        static void removeInvalidProposals(std::vector<RegionProposal> &proposals) {
+            proposals.erase(std::remove_if(proposals.begin(), proposals.end(), [](const RegionProposal & p)->bool {
+                return !p.isValid();
+            }), proposals.end());
+        }
+
+        static void sortProposals(std::vector<RegionProposal> &proposals, const std::function<bool (const RegionProposal&, const RegionProposal&) > &comparator) {
+            std::sort(proposals.begin(), proposals.end(), comparator);
+        }
     };
+
+    //helper functions
+
+    void mergeProposalsCommonInDomain(std::vector<RegionProposal>::iterator domain_start, std::vector<RegionProposal>::iterator domain_end, float IOU_thresh, float IU_diff_percentage, unsigned int num_segmentations_levels);
+
+    RegionProposal* findMatchingProposal(std::vector<RegionProposal>::iterator proposal, std::vector<RegionProposal>::iterator seg_level_start, std::vector<RegionProposal>::iterator seg_level_end, float IOU_thresh, float IU_diff_percentage);
+
 };
 
 #endif

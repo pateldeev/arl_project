@@ -6,7 +6,7 @@
 
 void run(const cv::Mat &img) {
     std::vector<cv::Rect> segmentation_regions;
-    std::vector<float> segmentation_scores, avg_saliency;
+    std::vector<float> segmentation_scores;
 
     std::chrono::high_resolution_clock::time_point t1, t2;
     double duration;
@@ -23,33 +23,49 @@ void run(const cv::Mat &img) {
 }
 
 int main(int argc, char * argv[]) {
-    //const cv::Mat img = cv::imread("/home/dp/Downloads/ARL_data/19.png");
-    //const cv::Mat img = cv::imread("/home/dp/Downloads/ARL_data/17.png");
-    //const cv::Mat img = cv::imread("/home/dp/Downloads/IMG_0834.jpeg");
     cv::Mat img;
-    std::srand(std::time(0));
-#if 0
-    const char file_name_format[] = "/home/dp/Downloads/data_cumulative/%d.png";
+    char file_name_format[100];
     char file_name[100];
-    int file_count = 0;
-    const int file_count_max = 18;
-#else
-    const char file_name_format[] = "/home/dp/Downloads/data_mine/%d.png";
-    char file_name[100];
-    int file_count = 0;
-    const int file_count_max = 20;
-#endif
+    int file_max;
+    int file_current = 0;
+
+    char data_set = '0';
+    if (argc > 1)
+        data_set = argv[1][0];
+
+    if (data_set == '1') {
+        strcpy(file_name_format, "/home/dp/Downloads/data_walkthrough/%d.png");
+        file_current = 27;
+        file_max = 36;
+    } else if (data_set == '2') {
+        strcpy(file_name_format, "/home/dp/Downloads/data_mine/%d.png");
+        file_current = 4;
+        file_max = 20;
+
+    } else if (data_set == '3') {
+        strcpy(file_name_format, "/home/dp/Downloads/data_cumulative/%d.png");
+        file_max = 17;
+    } else if (data_set == '4') {
+        strcpy(file_name_format, "/home/dp/Downloads/test/%d.jpg");
+        file_max = 10;
+    } else {
+        strcpy(file_name_format, "/home/dp/Downloads/data_representative/%d.png");
+        file_max = 14;
+        //file_current = 12;
+    }
+    if (argc > 2)
+        file_current = std::stoi(argv[2]);
 
     int key = 0;
     do {
         if (key == 'n')
-            ++file_count %= (file_count_max + 1);
-        else if (key == 'b' && --file_count < 0)
-            file_count = file_count_max;
+            ++file_current %= (file_max + 1);
+        else if (key == 'b' && --file_current < 0)
+            file_current = file_max;
 
-        sprintf(file_name, file_name_format, file_count);
+        sprintf(file_name, file_name_format, file_current);
         img = cv::imread(file_name);
-        //img = cv::imread("/home/dp/Downloads/images_Gonzen_shorten_FLIGHT_LONG_HOMINGEND/frame0636.jpg");
+        CV_Assert(!img.empty());
 
         run(img);
 

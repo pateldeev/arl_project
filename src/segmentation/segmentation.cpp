@@ -7,6 +7,7 @@
 namespace Segmentation {
 
     float RegionProposal::total_merge_scores = 0;
+    int RegionProposal::img_area = 0;
 
     void process(const cv::Mat &img, std::vector<cv::Rect> &proposals, std::vector<float> &scores) {
         std::vector<cv::Mat> img_domains;
@@ -14,17 +15,18 @@ namespace Segmentation {
         const int resize_w = img.cols * resize_h / img.rows;
         getDomains(img, img_domains, resize_h);
 
-        const std::vector<float> k_values = {600, 700, 800, 900, 1000};
         std::vector< std::vector<cv::Mat> > img_segmentations; //[domain][k-value]
-        getSegmentations(img_domains, img_segmentations, k_values);
+        getSegmentations(img_domains, img_segmentations);
 
         std::vector<RegionProposal> img_proposals;
         generateRegionProposals(img_segmentations, img_proposals);
         RegionProposal::total_merge_scores = 0;
 
-        mergeProposalsWithinSegmentationLevel(img_proposals); //merge per segmentation - within domain
+        mergeProposalsWithinSegmentationLevel(img_proposals); //merge within same segmentation domain - different domains
 
         mergeProposalsBetweenSegmentationLevels(img_proposals); //merge different segmentation levels
+
+        mergeProposalsCommonThroughoutDomain(img_proposals); //merge proposals found in all segmentation levels of a single domain
 
         getSignificantMergedRegions(img_proposals, proposals, scores); //get only regions merged between segmentation levels
 
@@ -49,6 +51,7 @@ namespace Segmentation {
 
     void getDomains(const cv::Mat &img, std::vector<cv::Mat> &img_domains, int resize_h) {
         const int resize_w = img.cols * resize_h / img.rows;
+        RegionProposal::img_area = resize_h * resize_w;
 
         img_domains.clear();
         img_domains.resize(6); //6 Domains [BGR, HSV, LAB, I, RGI, YCrCb]
@@ -75,14 +78,41 @@ namespace Segmentation {
         cv::cvtColor(img_domains[0], img_domains[5], cv::COLOR_BGR2YCrCb);
     }
 
-    void getSegmentations(const std::vector<cv::Mat> &img_domains, std::vector< std::vector<cv::Mat> > &segmentations, const std::vector<float> &k_vals, float sigma) {
-        segmentations.resize(img_domains.size(), std::vector<cv::Mat>(k_vals.size()));
-        cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> gs = cv::ximgproc::segmentation::createGraphSegmentation(sigma);
+    void getSegmentations(const std::vector<cv::Mat> &img_domains, std::vector< std::vector<cv::Mat> > &segmentations, unsigned int seg_levels) {
+        const float k_base = 600, k_step = 100;
+        const std::vector <float> sigma_vals = {0.8, 0.8, 0.5, 0.5, 0.8, 0.5};
+        segmentations.resize(img_domains.size(), std::vector<cv::Mat>(seg_levels));
 
-        for (unsigned int i_k = 0; i_k < k_vals.size(); ++i_k) {
-            gs->setK(k_vals[i_k]);
-            for (unsigned int i_d = 0; i_d < img_domains.size(); ++i_d)
-                gs->processImage(img_domains[i_d], segmentations[i_d][i_k]);
+        cv::Ptr<cv::ximgproc::segmentation::GraphSegmentation> gs = cv::ximgproc::segmentation::createGraphSegmentation();
+
+        for (unsigned int i_domain = 0; i_domain < img_domains.size(); ++i_domain) {
+            gs->setSigma(sigma_vals[i_domain]);
+
+            float k = k_base;
+            for (unsigned int i_seg = 0; i_seg < seg_levels; ++i_seg, k += k_step) {
+                gs->setK(k);
+                gs->processImage(img_domains[i_domain], segmentations[i_domain][i_seg]);
+
+                if (i_seg == 0) {
+                    double min, max;
+                    cv::minMaxLoc(segmentations[i_domain][i_seg], &min, &max);
+                    if (max < 10) {
+                        while (max < 10 && k > k_step) {
+                            k -= k_step;
+                            gs->setK(k);
+                            gs->processImage(img_domains[i_domain], segmentations[i_domain][i_seg]);
+                            cv::minMaxLoc(segmentations[i_domain][i_seg], &min, &max);
+                        }
+                    } else if (max >= 20) {
+                        while (max >= 20) {
+                            k += k_step;
+                            gs->setK(k);
+                            gs->processImage(img_domains[i_domain], segmentations[i_domain][i_seg]);
+                            cv::minMaxLoc(segmentations[i_domain][i_seg], &min, &max);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -125,12 +155,11 @@ namespace Segmentation {
         for (const std::pair< int, std::vector<cv::Point> > &p : seg_points_map) {
             cv::Rect box = cv::boundingRect(p.second);
             //only predict region if is bigger than a minimal dimensional size and contains enough salient points
+
             if (box.width > img_seg.rows * 0.02 && box.height > img_seg.cols * 0.02 && float(p.second.size()) / box.area() > 0.15)
                 boxes.emplace_back(box);
         }
     }
-
-    //proposals will be sorted by segmentation level and area (low to high)
 
     void generateRegionProposals(const std::vector< std::vector<cv::Mat> > &segmentations, std::vector<RegionProposal> &proposals, float max_region_size) {
         proposals.clear();
@@ -182,28 +211,25 @@ namespace Segmentation {
                 for (const std::pair< int, std::vector<cv::Point> > &p : seg_points_map) {
                     cv::Rect box = cv::boundingRect(p.second);
                     //only predict region if is bigger than a minimal dimensional size and contains enough salient points
+
                     if (box.width > img_seg.rows * 0.02 && box.height > img_seg.cols * 0.02 && float(p.second.size()) / box.area() > 0.15)
                         proposals.emplace_back(box, segmentation_weights[s], d, s);
                 }
             }
         }
-
-        //sort by segmentation level (low to hight) and area (low to high)
-        std::sort(proposals.begin(), proposals.end(), [](const RegionProposal &r1, const RegionProposal & r2)-> bool {
-            if (r1.seg_level == r2.seg_level)
-                return r1.box.area() < r2.box.area();
-            else
-                return r1.seg_level < r2.seg_level;
-        });
     }
 
-    //proposals must be sorted by segmentation level and area (low to high)
-    //will return proposals sorted by segmentation level (low to high) and score (high to low)
+    void mergeProposalsWithinSegmentationLevel(std::vector<RegionProposal> &proposals, float IOU_thresh, float IU_diff_percentage) {
+        if (proposals.size() <= 1)
+            return;
 
-    void mergeProposalsWithinSegmentationLevel(std::vector<RegionProposal> &proposals, float IOU_thresh) {
+        //sort by segmentation level (low to high) and area (low to high)
+        RegionProposal::sortProposals(proposals, [](const RegionProposal & r1, const RegionProposal & r2)-> bool {
+            return (r1.seg_level == r2.seg_level) ? (r1.box.area() < r2.box.area()) : (r1.seg_level < r2.seg_level);
+        });
+
         std::vector<RegionProposal>::iterator seg_start = proposals.begin(), seg_end;
         for (int s_level = 0; s_level <= proposals.back().seg_level; ++s_level) {
-
             //get to start of proposals
             while (seg_start->seg_level != s_level)
                 ++seg_start;
@@ -230,9 +256,10 @@ namespace Segmentation {
                             continue; //ignore already merged regions
 
                         if (seg_candidate2->box.area() < max_candidate2_area) {
-                            if (seg_candidate1->tryMerge(*seg_candidate2, IOU_thresh)) {
+                            if (seg_candidate1->tryMerge(*seg_candidate2, IOU_thresh, IU_diff_percentage)) {
+                                seg_candidate1->domain = -1; //new merged belongs to no single domain
                                 merged = true;
-                                break; //segments merged
+                                break; //merged - move onto next one
                             }
                         } else {
                             break; //reached largest possible rectangle that can be merged move on
@@ -242,24 +269,18 @@ namespace Segmentation {
             }
         }
 
-        //remove merged regions
-        proposals.erase(std::remove_if(proposals.begin(), proposals.end(), [](const RegionProposal & p)->bool {
-            return !p.isValid();
-        }), proposals.end());
-
-        //sort by segmentation level (low to high) and score (high to low)
-        std::sort(proposals.begin(), proposals.end(), [](const RegionProposal &r1, const RegionProposal & r2)-> bool {
-            if (r1.seg_level == r2.seg_level)
-                return r2.score < r1.score;
-            else
-                return r1.seg_level < r2.seg_level;
-        });
+        RegionProposal::removeInvalidProposals(proposals); //remove merged regions
     }
 
-    //proposals must be sorted by segmentation level (low to high) and score (high to low)
-    //will return with intra-domain merged proposals (seg_level == -1) at front sorted by score (high to low)
+    void mergeProposalsBetweenSegmentationLevels(std::vector<RegionProposal> &proposals, float min_score, float IOU_thresh, float IU_diff_percentage) {
+        if (proposals.size() <= 1)
+            return;
 
-    void mergeProposalsBetweenSegmentationLevels(std::vector<RegionProposal> &proposals, float min_score, float IOU_thresh) {
+        //sort by segmentation level (low to high) and score (high to low)
+        RegionProposal::sortProposals(proposals, [](const RegionProposal & r1, const RegionProposal & r2)-> bool {
+            return (r1.seg_level == r2.seg_level) ? (r2.score < r1.score) : (r1.seg_level < r2.seg_level);
+        });
+
         int num_seg_levels = proposals.back().seg_level + 1; //since proposals are sorted
         std::vector<RegionProposal>::iterator segmentation_cutoffs[num_seg_levels + 1]; //store where each segmentation starts
 
@@ -288,7 +309,7 @@ namespace Segmentation {
                         if (!merge_candidate->isValid() || !merge_candidate->hasSegLevel())
                             continue; //regions has already been merged
 
-                        if (region_to_merge->tryMerge(*merge_candidate, IOU_thresh)) {
+                        if (region_to_merge->tryMerge(*merge_candidate, IOU_thresh, IU_diff_percentage)) {
                             region_to_merge->seg_level = -1; //indicate merged with different segmentation level
                         }
                     }
@@ -296,27 +317,48 @@ namespace Segmentation {
             }
         }
 
-        //sort by segmentation level (low to high) and score (high to low) with newly merged regions at front
-        std::sort(proposals.begin(), proposals.end(), [](const RegionProposal &r1, const RegionProposal & r2)-> bool {
-            if (r1.seg_level == r2.seg_level)
-                return r2.score < r1.score;
-            else
-                return r1.seg_level < r2.seg_level;
-        });
+        RegionProposal::removeInvalidProposals(proposals); //remove merged regions
     }
 
-    //get only the proposals that have been merged between domains - proposals must be sorted by segmentation level (low to high)
+    void mergeProposalsCommonThroughoutDomain(std::vector<RegionProposal> &proposals, float IOU_thresh, float IU_diff_percentage, unsigned int num_segmentations_levels) {
+        if (proposals.size() <= 1)
+            return;
+
+        //sort by domain (low to high) and then segmentation level (low to high) and score
+        RegionProposal::sortProposals(proposals, [](const RegionProposal & r1, const RegionProposal & r2)-> bool {
+            return (r1.domain == r2.domain) ? (r1.seg_level < r2.seg_level) : (r1.domain < r2.domain);
+        });
+
+        std::vector<RegionProposal>::iterator d_start = proposals.begin(), d_end = proposals.begin();
+        int target_domain = 0;
+
+        while (d_end != proposals.end()) {
+            //find start and end of target domain
+            while (d_start->domain < target_domain && d_start != proposals.end()) //get to first unmerged proposal in domain 0
+                ++d_start;
+            d_end = d_start;
+
+            while (d_end->domain == target_domain && d_end != proposals.end())
+                ++d_end;
+
+            mergeProposalsCommonInDomain(d_start, d_end, IOU_thresh, IU_diff_percentage, num_segmentations_levels); //merge proposals in domain using helper function
+
+            ++target_domain; //go onto next domain
+        }
+
+        RegionProposal::removeInvalidProposals(proposals); //remove merged regions
+    }
+
+    //get only the proposals that have been merged between domains or found in all segmentations levels of one domain
 
     void getSignificantMergedRegions(const std::vector<RegionProposal> &proposals, std::vector<cv::Rect> &signficiant_regions, std::vector<float> &sigificant_region_scores) {
         //transfer the most significant proposals
         signficiant_regions.clear();
         sigificant_region_scores.clear();
         for (const RegionProposal &p : proposals) {
-            if (p.seg_level == -1) {
+            if (!p.hasSegLevel()) {
                 signficiant_regions.push_back(p.box);
                 sigificant_region_scores.push_back(p.score / RegionProposal::total_merge_scores);
-            } else {
-                break;
             }
         }
     }
@@ -334,63 +376,57 @@ namespace Segmentation {
         }
     }
 
+    //helper function for mergeProposalsCommonThroughoutDomain
+    //all regions between domain_start and domain_end must belong to same domain - should be sorted by segmentation_level
 
-
-    //old methodology - for selectiveSegmentationMain
-
-    void calculateSignificantRegions(const std::vector< std::vector< std::vector<cv::Rect> > > &regions_img, std::vector< std::pair<cv::Rect, float> > &regions_significant, float IOU_tresh) {
-        regions_significant.clear();
-
-        std::vector<float> weights(regions_img[0].size());
-        for (int i = 0; i < weights.size(); ++i)
-            weights[i] = 1 / (1 + std::exp(-i)); //weight per segmentation level.
-
-        for (const std::vector< std::vector<cv::Rect> > &regions_domain : regions_img) { //iterate through each domain
-            for (unsigned int s = 0; s < regions_domain.size(); ++s) {
-                for (const cv::Rect &region : regions_domain[s]) {
-                    bool merged = false;
-
-                    for (std::pair<cv::Rect, float> &r_s : regions_significant) {
-                        if (float((region & r_s.first).area()) / (region | r_s.first).area() >= IOU_tresh) {
-                            r_s.first = region | r_s.first;
-                            r_s.second += weights[s];
-                            merged = true;
-                        }
-                    }
-
-                    if (!merged)
-                        regions_significant.emplace_back(region, weights[s]);
-                }
-            }
+    void mergeProposalsCommonInDomain(std::vector<RegionProposal>::iterator domain_start, std::vector<RegionProposal>::iterator domain_end, float IOU_thresh, float IU_diff_percentage, unsigned int num_segmentations_levels) {
+        std::vector<RegionProposal>::iterator seg_level_start[num_segmentations_levels + 1];
+        int seg_level = -1;
+        for (std::vector<RegionProposal>::iterator p = domain_start; p != domain_end; ++p) {
+            if (p->seg_level == seg_level + 1)
+                seg_level_start[++seg_level] = p;
         }
+        seg_level_start[num_segmentations_levels] = domain_end;
 
-        int first_valid = 0;
-        bool merged = true;
-        while (merged) {
-            merged = false;
-            for (unsigned int i = first_valid; i < regions_significant.size() - 1; ++i) {
-                for (unsigned int j = i + 1; j < regions_significant.size(); ++j) {
-                    if (float((regions_significant[i].first & regions_significant[j].first).area()) / (regions_significant[i].first | regions_significant[j].first).area() >= IOU_tresh) {
-
-                        regions_significant[j].first |= regions_significant[i].first;
-                        regions_significant[j].second += regions_significant[i].second;
-
-                        std::iter_swap(regions_significant.begin() + first_valid, regions_significant.begin() + i);
-
-                        ++first_valid;
-                        merged = true;
+        if (seg_level == num_segmentations_levels - 1) { //all segmentation levels have regions
+            for (std::vector<RegionProposal>::iterator p = seg_level_start[0]; p != seg_level_start[1]; ++p) {
+                RegionProposal * matching_regions[num_segmentations_levels];
+                unsigned int i = 1;
+                for (; i < num_segmentations_levels; ++i) {
+                    matching_regions[i] = findMatchingProposal(p, seg_level_start[i], seg_level_start[i + 1], IOU_thresh, IU_diff_percentage);
+                    if (!matching_regions[i]) //no matching region in segmentation level
                         break;
+                }
+                if (i == num_segmentations_levels) { //there is matching region in every every segmentation level
+                    p->seg_level = -2;
+                    p->status = 2;
+                    for (unsigned int j = 1; j < num_segmentations_levels; ++j) {
+
+                        p->score += matching_regions[j]->score;
+                        matching_regions[j]->status = 0;
                     }
+                    RegionProposal::total_merge_scores += p->score;
                 }
             }
         }
+    }
 
-        regions_significant.erase(regions_significant.begin(), regions_significant.begin() + first_valid);
 
-        //sort regions by likelyhood of being and object
-        std::sort(regions_significant.begin(), regions_significant.end(), [](const std::pair<cv::Rect, float> &r1, const std::pair<cv::Rect, float> &r2)-> bool {
-            return r1.second < r2.second;
-        });
+    //helper function for mergeProposalsCommonInDomain
+    //returns pointer to proposal that matches given one in specified range
+
+    RegionProposal* findMatchingProposal(std::vector<RegionProposal>::iterator proposal, std::vector<RegionProposal>::iterator seg_level_start, std::vector<RegionProposal>::iterator seg_level_end, float IOU_thresh, float IU_diff_percentage) {
+        cv::Point proposal_center = 0.5 * (proposal->box.tl() + proposal->box.br());
+
+        for (std::vector<RegionProposal>::iterator p = seg_level_start; p != seg_level_end; ++p) {
+            if (p->box.contains(proposal_center)) { //only check for matching if box contains center
+                float I = (proposal->box & p->box).area();
+                float U = (proposal->box | p->box).area();
+                if (I / U >= IOU_thresh || (U - I) <= IU_diff_percentage * RegionProposal::img_area)
+                    return &(*p); //found matching
+            }
+        }
+        return nullptr; //no matching found
     }
 
 };

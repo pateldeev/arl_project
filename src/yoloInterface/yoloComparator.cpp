@@ -9,14 +9,19 @@ int main(int argc, char * argv[]) {
     const std::string weightsFile = "/home/dp/Desktop/darknet-master/weights/yolov3.weights";
     YoloInterface yolo(configFile, weightsFile, labelFile);
 
+#if 0
     const char file_name_format[] = "/home/dp/Downloads/data_mine/%d.png";
     char file_name[100];
-    int file_count = 0;
+    int file_count = 3;
     const int file_count_max = 20;
-
-    std::vector < cv::Rect > segmentation_regions;
-    std::vector<float> segmentation_scores;
-    std::time_t segmentation_srand_time = std::time(0);
+#else 
+    const char file_name_format[] = "/home/dp/Downloads/data_walkthrough/%d.png";
+    char file_name[100];
+    int file_count = 35;
+    const int file_count_max = 27;
+#endif
+    std::vector < cv::Rect > regions;
+    std::vector<float> scores;
 
     cv::Mat img;
 
@@ -30,21 +35,14 @@ int main(int argc, char * argv[]) {
         sprintf(file_name, file_name_format, file_count);
         img = cv::imread(file_name);
         CV_Assert(!img.empty());
-        yolo.setThresholds(0.2);
+        yolo.setThresholds(0.25);
+
+        Segmentation::process(img, regions, scores);
+
+        SaliencyFilter::removeUnsalient(img, regions, scores, regions, false);
 
         DisplayImg(YoloInterface::getPredictionsDisplayable(img, yolo.processImage(img)), "yolo_predictions");
-
-        std::srand(segmentation_srand_time);
-        Segmentation::process(img, segmentation_regions, segmentation_scores);
-        Segmentation::showSegmentationResults(img, segmentation_regions, segmentation_scores, "my_segmentations", 2);
-
-        cv::Mat img_saliency;
-        cv::saliency::StaticSaliencySpectralResidual::create()->computeSaliency(img, img_saliency);
-        cv::Mat disp_saliency;
-        cv::normalize(img_saliency, disp_saliency, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-        cv::cvtColor(disp_saliency, disp_saliency, cv::COLOR_GRAY2BGR);
-        std::srand(segmentation_srand_time);
-        Segmentation::showSegmentationResults(disp_saliency, segmentation_regions, segmentation_scores, "saliency", 2);
+        Segmentation::showSegmentationResults(img, regions, scores, "my_proposals", 2);
 
         key = cv::waitKey();
     } while (key != 'q' && key != 'c' && key != 27);

@@ -5,7 +5,10 @@
 
 namespace SaliencyFilter {
 
-    void removeUnsalient(const cv::Mat &img, const std::vector<cv::Rect> &segmentation_regions, const std::vector<float> &segmentation_scores, std::vector<cv::Rect> &surviving_regions);
+    cv::Mat computeSaliencyMap(const cv::Mat &img, bool equalize = true);
+
+    void removeUnsalient(const cv::Mat &img, const std::vector<cv::Rect> &segmentation_regions, const std::vector<float> &segmentation_scores, std::vector<cv::Rect> &surviving_regions, bool display_debug = true);
+
     void calculateMeanSTD(const std::vector<float> &data, float &mean, float &stdeviation);
 
     class LineDescriptor {
@@ -73,39 +76,52 @@ namespace SaliencyFilter {
 
         ~SaliencyAnalyzer(void);
 
-        //SaliencyAnalyzer is not meant to be copied or moved - for simplicity
+        //SaliencyAnalyzer is not meant to be copied - but can be moved
         SaliencyAnalyzer(const SaliencyAnalyzer&) = delete;
-        SaliencyAnalyzer(SaliencyAnalyzer&&) = delete;
         SaliencyAnalyzer& operator=(const SaliencyAnalyzer&) = delete;
-        SaliencyAnalyzer& operator=(SaliencyAnalyzer&&) = delete;
+        SaliencyAnalyzer(SaliencyAnalyzer&&) = default;
+        SaliencyAnalyzer& operator=(SaliencyAnalyzer&&) = default;
 
     public:
         void addSegmentedRegion(const cv::Rect &region, float segmentation_score);
 
-        void mergeSubRegions(float overlap_thresh = 0.92, float min_size_of_inner = 0.5);
+        void tryMergingSubRegions(float force_merge_threshold = 0.5);
 
-        void applySaliencyThreshold(void);
+        void ensureSaliencyOfRegions(void);
 
-        void computeSaliencyDescriptors(void);
+        bool reconcileOverlappingRegions(float overlap_thresh = 0.5);
+
+        void ensureDistinguishabilityOfRegions(void);
+
+        void computeDescriptorsAndResizeRegions(void);
+        
+        void keepBestRegions(unsigned int keep_num = 3);
 
         void getRegionsSurviving(std::vector<cv::Rect> &regions) const;
 
     private:
-        void sortRegionsByArea(void); //from high low
-        void removeInvalidRegions(void);
-
-    private:
 
         struct Region {
-            Region(const cv::Mat &saliency_map, const cv::Rect &region, float score, float saliency_map_std);
+            Region(const cv::Mat &saliency_map, const cv::Rect &region, float score);
 
-            void ensureRegionSaliency(float std_thresh_overall, float saliency_mean, float saliency_std);
+            void forceMergeWithSubRegion(Region& sub); //sub must be subregion
 
-            void computeDescriptorsAlongAllEdges(const cv::Mat &saliency_map, const cv::Mat &img);
+            void tryMergeWithSubRegion(Region &sub); //sub must be subregion
 
-            void computeDescriptorAlongSingleEdge(RECT_SIDES side, const cv::Mat &saliency_map);
+            void ensureRegionSaliency(float std_thresh_overall);
+
+            void forceMergeWithRegion(Region &other, const cv::Rect &I, const cv::Mat &sal_map); //needs intersection rectangle
+
+            void computeDescriptorsAndResize(const cv::Mat &saliency_map, const cv::Mat &img);
+
+            void computeDescriptorAlongEdge(RECT_SIDES side, const cv::Mat &saliency_map);
 
             void resizeBoxEdge(RECT_SIDES side, int change);
+
+            static Region computeReconciledRegion(const Region &r1, const Region &r2, const cv::Mat &saliency_map_equalized, const cv::Mat &saliency_map_unequalized, const cv::Mat &img);
+
+            static void sortRegionsByArea(std::vector<Region> &regions); //from high low
+            static void removeInvalidRegions(std::vector<Region> &regions);
 
             cv::Rect box;
             float box_sal;
@@ -123,16 +139,16 @@ namespace SaliencyFilter {
             float avg_sal_surroundings;
             float std_change_from_surroundings; //+ = good, - = bad
 
-            float std_saliency_map;
-
-            int status; //1 = fine, 0 = merged with another detection, -1 = removed by standard deviation too low, -2 = removed because too much like neighbors
+            int status; //1 = fine, 0 = merged with another detection, -1 = removed by standard deviation too low, -2 = removed because too much like neighbors,  -5 = reconciled
             float score;
             LineDescriptor edges[RECT_SIDES::NUM_SIDES];
+
+            static float saliency_map_mean;
+            static float saliency_map_std;
         };
 
-        cv::Mat m_saliency_map;
-        float m_saliency_mean;
-        float m_saliency_std;
+        cv::Mat m_saliency_map_equalized;
+        cv::Mat m_saliency_map_unequalized;
 
         std::vector<Region> m_regions;
     };

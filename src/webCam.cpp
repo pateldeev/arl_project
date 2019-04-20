@@ -79,7 +79,7 @@ int main(int argc, char * argv[]) {
             SegmentationCV::process(imgResized, proposals, 150, 150, 0.8);
 
 #ifdef DEBUG_SEGMENTATION
-            ShowManyImages("m_images", SegmentationCV::m_images, 2, 3);
+            DisplayMultipleImages("m_images", SegmentationCV::m_images, 2, 3);
             std::vector<cv::Mat> temp1, temp2;
             for (unsigned int i = 0; i < SegmentationCV::debugDisp1.size(); ++i) {
                 temp1.push_back(GetGraphSegmentationViewable(SegmentationCV::debugDisp1[i]));
@@ -106,8 +106,8 @@ int main(int argc, char * argv[]) {
                     tempDisp2.push_back(temp2[i].clone());
                 }
 
-                ShowManyImages("m_images[]_regions", tempDisp2, 2, 3);
-                ShowManyImages("m_images[]", tempDisp1, 2, 3);
+                DisplayMultipleImages("m_images[]_regions", tempDisp2, 2, 3);
+                DisplayMultipleImages("m_images[]", tempDisp1, 2, 3);
                 key = cv::waitKey();
             } while (key != 'q');
             cv::destroyWindow("m_images");

@@ -7,6 +7,7 @@ SET(CMAKE_CXX_STANDARD 17)
 FIND_PACKAGE(OpenCV 4.0.0 REQUIRED)
 FIND_PACKAGE(CUDA REQUIRED)
 FIND_PACKAGE(OpenMP REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS serialization REQUIRED)
 
 #Find flycapture library
 FIND_LIBRARY(FlyCapture2_LIBS NAMES flycapture libflycapture)
@@ -20,7 +21,7 @@ else(NOT FlyCapture2_INCLUDE_DIRS)
   SET(FlyCapture2_INCLUDE_DIRS "${FlyCapture2_INCLUDE_DIRS}/flycapture")
 endif(NOT FlyCapture2_INCLUDE_DIRS)
 
-SET(INCLUDES ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src/yoloInterface/darknet/include ${OpenCV_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS} ${FlyCapture2_INCLUDE_DIRS})
+SET(INCLUDES ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src/yoloInterface/darknet/include ${OpenCV_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS} ${FlyCapture2_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${INCLUDES})
 
 #Copy darknet (YOLOv3) files to build directory - needed to build darknet library
@@ -42,7 +43,8 @@ SET(DARKNET_LIBS DARKNET_LIBRARY)
 SET(SRC_HELPER "${PROJECT_SOURCE_DIR}/src/functions.cpp")
 SET(SRC_SEGMENTATION "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 SET(SRC_SEGMENTATION_CV "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
-SET(SRC_SALIENCY "${PROJECT_SOURCE_DIR}/src/saliency/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/SaliencyAnalyzer.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/LineDescriptor.cpp")
+SET(SRC_SALIENCY "${PROJECT_SOURCE_DIR}/src/saliency/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/SaliencyAnalyzer.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/SaliencyRegion.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/LineDescriptor.cpp")
+SET(SRC_VOCUS2 "${PROJECT_SOURCE_DIR}/src/vocus2/vocus2.cpp")
 SET(SRC_YOLO "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
 
 #create various executables
@@ -53,7 +55,7 @@ SET(SRC_YOLO "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
 
 #ADD_EXECUTABLE(yolo_visualization "${PROJECT_SOURCE_DIR}/src/yoloInterface/visualization.cpp")
 #ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" ${SRC_HELPER} ${SRC_YOLO})
-ADD_EXECUTABLE(yolo_comparison "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloComparator.cpp" ${SRC_HELPER} ${SRC_YOLO} ${SRC_SEGMENTATION}  ${SRC_SALIENCY})
+ADD_EXECUTABLE(yolo_comparison "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloComparator.cpp" ${SRC_HELPER} ${SRC_YOLO} ${SRC_SEGMENTATION}  ${SRC_SALIENCY} ${SRC_VOCUS2})
 
 #ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/webCam.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
 #ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_HELPER} ${SRC_SALIENCY})
@@ -62,10 +64,12 @@ ADD_EXECUTABLE(yolo_comparison "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloComp
 
 #ADD_EXECUTABLE(cv_segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMainCV.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
 ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
-#ADD_EXECUTABLE(segmentation_old "${PROJECT_SOURCE_DIR}/src/segmentation/segMainOld.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
-ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY})
+ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2})
 #ADD_EXECUTABLE(test_saliency_merging "${PROJECT_SOURCE_DIR}/src/testSaliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+
+#ADD_EXECUTABLE(vocus2_test "${PROJECT_SOURCE_DIR}/src/vocus2/main.cpp" ${SRC_HELPER} ${SRC_VOCUS2})
+
 
 #link executables to libraries
 #TARGET_LINK_LIBRARIES(old_regions ${OpenCV_LIBS})
@@ -75,7 +79,7 @@ ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SR
 
 #TARGET_LINK_LIBRARIES(yolo_visualization ${OpenCV_LIBS})
 #TARGET_LINK_LIBRARIES(yolo ${OpenCV_LIBS} ${DARKNET_LIBS})
-TARGET_LINK_LIBRARIES(yolo_comparison ${OpenCV_LIBS} ${DARKNET_LIBS})
+TARGET_LINK_LIBRARIES(yolo_comparison ${OpenCV_LIBS} ${DARKNET_LIBS} ${Boost_LIBRARIES})
 
 #TARGET_LINK_LIBRARIES(webcam ${OpenCV_LIBS} ${DARKNET_LIBS})
 #TARGET_LINK_LIBRARIES(fly_capture_camera ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
@@ -84,7 +88,8 @@ TARGET_LINK_LIBRARIES(yolo_comparison ${OpenCV_LIBS} ${DARKNET_LIBS})
 
 #TARGET_LINK_LIBRARIES(cv_segmentation ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(segmentation ${OpenCV_LIBS})
-#TARGET_LINK_LIBRARIES(segmentation_old ${OpenCV_LIBS})
 
-TARGET_LINK_LIBRARIES(test_area ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(test_area ${OpenCV_LIBS} ${Boost_LIBRARIES})
 #TARGET_LINK_LIBRARIES(test_saliency_merging ${OpenCV_LIBS})
+
+#TARGET_LINK_LIBRARIES(vocus2_test ${OpenCV_LIBS} ${Boost_LIBRARIES})

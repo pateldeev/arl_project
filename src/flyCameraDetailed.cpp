@@ -154,8 +154,8 @@ int main(int argc, char * argv[]) {
                 temp.push_back(GetGraphSegmentationViewable(s));
 
             WriteText(temp[0], std::to_string(disp_domain));
-            ShowManyImages("domains_all", img_domains, 2, 3);
-            ShowManyImages("selected_domain_segmentations", temp, 2, 3);
+            DisplayMultipleImages("domains_all", img_domains, 2, 3);
+            DisplayMultipleImages("selected_domain_segmentations", temp, 2, 3);
 
             update_segmentation_display = false;
         }
