@@ -45,7 +45,7 @@ SET(SRC_SEGMENTATION "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 SET(SRC_SEGMENTATION_CV "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
 SET(SRC_SALIENCY "${PROJECT_SOURCE_DIR}/src/saliency/saliency.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/SaliencyAnalyzer.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/SaliencyRegion.cpp" "${PROJECT_SOURCE_DIR}/src/saliency/LineDescriptor.cpp")
 SET(SRC_VOCUS2 "${PROJECT_SOURCE_DIR}/src/vocus2/vocus2.cpp")
-SET(SRC_YOLO "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp")
+SET(SRC_YOLO "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" ${SRC_HELPER})
 
 #create various executables
 #ADD_EXECUTABLE(old_regions "${PROJECT_SOURCE_DIR}/src/old/regions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
@@ -66,6 +66,7 @@ ADD_EXECUTABLE(yolo_comparison "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloComp
 ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 
 ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2})
+ADD_EXECUTABLE(poster "${PROJECT_SOURCE_DIR}/src/main.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2} ${SRC_YOLO} )
 #ADD_EXECUTABLE(test_saliency_merging "${PROJECT_SOURCE_DIR}/src/testSaliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
 #ADD_EXECUTABLE(vocus2_test "${PROJECT_SOURCE_DIR}/src/vocus2/main.cpp" ${SRC_HELPER} ${SRC_VOCUS2})
@@ -90,6 +91,7 @@ TARGET_LINK_LIBRARIES(yolo_comparison ${OpenCV_LIBS} ${DARKNET_LIBS} ${Boost_LIB
 TARGET_LINK_LIBRARIES(segmentation ${OpenCV_LIBS})
 
 TARGET_LINK_LIBRARIES(test_area ${OpenCV_LIBS} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(poster ${OpenCV_LIBS} ${DARKNET_LIBS} ${Boost_LIBRARIES})
 #TARGET_LINK_LIBRARIES(test_saliency_merging ${OpenCV_LIBS})
 
 #TARGET_LINK_LIBRARIES(vocus2_test ${OpenCV_LIBS} ${Boost_LIBRARIES})

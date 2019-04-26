@@ -1,12 +1,20 @@
 #include "yoloInterface.h"
 
-#include <iostream>
+#include "functions.h"
 
 YoloInterface::YoloInterface(const std::string &config_file, const std::string &weights_file, const std::string &class_labels_file, float thresh)
-: m_net_size(0), m_thresh(thresh), m_thresh_hier(0.5) {
-    std::cout << std::endl << "Loading darknet network!" << std::endl;
+: YoloInterface(thresh) {
+    loadNetwork(config_file, weights_file, class_labels_file); //load network 
+}
 
-    //load network 
+YoloInterface::YoloInterface(float thresh) : m_net(nullptr), m_net_size(0), m_thresh(thresh), m_thresh_hier(0.5) {
+}
+
+YoloInterface::~YoloInterface(void) {
+    free_network(m_net);
+}
+
+void YoloInterface::loadNetwork(const std::string &config_file, const std::string &weights_file, const std::string &class_labels_file) {
     m_net = load_network(const_cast<char*> (config_file.c_str()), const_cast<char*> (weights_file.c_str()), 0);
     m_net_size = m_net->n;
     set_batch_network(m_net, 1);
@@ -14,15 +22,9 @@ YoloInterface::YoloInterface(const std::string &config_file, const std::string &
     //get class names and convert to more usable format
     char **names = get_labels(const_cast<char*> (class_labels_file.c_str()));
     m_class_names.resize(m_net->layers[m_net_size - 1].classes);
-    for (int i = 0; i < m_class_names.size(); ++i)
+    for (unsigned int i = 0; i < m_class_names.size(); ++i)
         m_class_names[i] = names[i];
     free((void *) names);
-
-    std::cout << std::endl << "Done Loading darknet network!" << std::endl;
-}
-
-YoloInterface::~YoloInterface(void) {
-    free_network(m_net);
 }
 
 void YoloInterface::setThresholds(float threshold, float threshold_hier) {
@@ -44,16 +46,17 @@ std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > YoloInterface:
 
     do_nms_sort(dets, nboxes, l.classes, 0.45);
 
-    std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > regions;
-    regions.reserve(nboxes);
+
+    m_predictions.clear();
+    m_predictions.reserve(nboxes);
 
     for (int i = 0; i < nboxes; ++i) {
         cv::Point r_tl(img_yolo.w * (dets[i].bbox.x - dets[i].bbox.w / 2), img_yolo.h * (dets[i].bbox.y - dets[i].bbox.h / 2));
         cv::Size r_scale(dets[i].bbox.w * img_yolo.w, dets[i].bbox.h * img_yolo.h);
 
-        for (int j = 0; j < m_class_names.size(); ++j) {
+        for (unsigned int j = 0; j < m_class_names.size(); ++j) {
             if (dets[i].prob[j] > m_thresh)
-                regions.emplace_back(std::piecewise_construct, std::forward_as_tuple(r_tl, r_scale), std::forward_as_tuple(dets[i].prob[j], m_class_names[j]));
+                m_predictions.emplace_back(std::piecewise_construct, std::forward_as_tuple(r_tl, r_scale), std::forward_as_tuple(dets[i].prob[j], m_class_names[j]));
         }
     }
 
@@ -61,26 +64,95 @@ std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > YoloInterface:
     free_image(img_resized);
     free_image(img_yolo);
 
-    sortPredictionsByObjectness(regions);
+    sortPredictionsByObjectness();
 
-    return regions;
+    return m_predictions;
 }
 
-void YoloInterface::sortPredictionsByObjectness(std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions) {
-    std::sort(predictions.begin(), predictions.end(), [](const std::pair<cv::Rect, std::pair<float, std::string>> &p1, const std::pair<cv::Rect, std::pair<float, std::string>> &p2)->bool {
-        return p1.second.first > p2.second.first;
-    });
+void YoloInterface::saveResults(const std::string &filename) const {
+    std::ofstream f(filename);
+    if (!f.is_open())
+        return;
+
+    for (const std::pair<cv::Rect, std::pair<float, std::string>> &p : m_predictions)
+        f << "(" << p.first.tl().x << "," << p.first.tl().y << ")-->" << "(" << p.first.br().x << "," << p.first.br().y << ")" << p.second.second << "=" << p.second.first << std::endl;
+
+    f.close();
+}
+
+void YoloInterface::readResults(const std::string &filename) {
+    std::ifstream f(filename);
+    if (!f.is_open())
+        return;
+
+    m_predictions.clear();
+
+
+    cv::Point tl, br;
+    std::string class_name;
+    float objectness;
+
+    std::string s;
+    unsigned int p1, p2;
+
+    while (std::getline(f, s) && s.size()) {
+        p1 = 0;
+        p2 = s.find_first_of(',');
+        tl.x = std::stoi(s.substr(p1 + 1, p2 - p1 - 1));
+
+        p1 = p2;
+        p2 = s.find_first_of(')', p1);
+        tl.y = std::stoi(s.substr(p1 + 1, p2 - p1 - 1));
+
+        p1 = s.find_first_of('(', p2);
+        p2 = s.find_first_of(',', p1);
+        br.x = std::stoi(s.substr(p1 + 1, p2 - p1 - 1));
+
+        p1 = p2;
+        p2 = s.find_first_of(')', p1);
+        br.y = std::stoi(s.substr(p1 + 1, p2 - p1 - 1));
+
+        p1 = p2;
+        p2 = s.find_first_of('=', p1);
+        class_name = s.substr(p1 + 1, p2 - p1 - 1);
+
+        p1 = p2;
+        objectness = std::stof(s.substr(p1 + 1));
+
+        m_predictions.emplace_back(std::piecewise_construct, std::forward_as_tuple(tl, br), std::forward_as_tuple(objectness, class_name));
+    }
+
+    f.close();
+}
+
+unsigned int YoloInterface::size(void) const {
+    return m_predictions.size();
+}
+
+std::pair<cv::Rect, std::pair<float, std::string>> YoloInterface::operator[](int i) {
+    //std::cout << "2" << std::endl;
+    return m_predictions.at(i);
+}
+
+const std::pair<cv::Rect, std::pair<float, std::string>>&YoloInterface::operator[](int i) const {
+    //std::cout << "1" << std::endl;
+    return m_predictions.at(i);
 }
 
 cv::Mat YoloInterface::getPredictionsDisplayable(const cv::Mat &img, const std::vector< std::pair<cv::Rect, std::pair<float, std::string>> > &predictions) {
     cv::Mat disp_img = img.clone();
 
     int text_y_loc = 1;
+    //std::srand(std::time(NULL));
+    GetRandomColor(true);
     for (const std::pair<cv::Rect, std::pair<float, std::string>> &r : predictions) {
-        cv::Scalar color(100 + std::rand() % 155, 100 + std::rand() % 155, 100 + std::rand() % 155);
+        static int i = 0;
+        if (++i == 1)
+            continue;
+        cv::Scalar color = GetRandomColor();
         std::string text = r.second.second + "(" + std::to_string(r.second.first) + ")";
         cv::rectangle(disp_img, r.first, color, 2);
-        cv::putText(disp_img, text, cv::Point(10, 25 * (++text_y_loc)), cv::FONT_HERSHEY_DUPLEX, 0.75, color, 1.25);
+        cv::putText(disp_img, text, cv::Point(10, 42 * (++text_y_loc)), cv::FONT_HERSHEY_DUPLEX, 1.2, color, 1.25);
     }
 
     return disp_img;
@@ -108,4 +180,10 @@ image YoloInterface::img_cv_to_yolo(const cv::Mat &img) {
                 img_data++[0] = float(img.at<cv::Vec3b>(j, i)[2 - k]) / 255; //OpenCV stores in BGR format
 
     return img_yolo;
+}
+
+void YoloInterface::sortPredictionsByObjectness(void) {
+    std::sort(m_predictions.begin(), m_predictions.end(), [](const std::pair<cv::Rect, std::pair<float, std::string>> &p1, const std::pair<cv::Rect, std::pair<float, std::string>> &p2)->bool {
+        return p1.second.first > p2.second.first;
+    });
 }

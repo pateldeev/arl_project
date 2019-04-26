@@ -70,7 +70,7 @@ void showProposalsMergedWithin(const cv::Mat &img, const std::vector< Segmentati
             std::string score("00.000");
             std::snprintf(const_cast<char*> (score.c_str()), score.size(), "%.2f", p.score);
             score.resize(score.find_first_of('\0'));
-            WriteText(dips_regions_merged[0], score, 0.4, color, cv::Point(2 + 42 * p.seg_level, 20 * (++score_text_starting_pos[p.seg_level])));
+            WriteText(dips_regions_merged[0], score, 0.35, color, cv::Point(2 + 42 * p.seg_level, 10 * (++score_text_starting_pos[p.seg_level])));
         }
         ++region_cnt[p.seg_level];
     }
@@ -107,6 +107,36 @@ void showProposals(const cv::Mat &img, const std::vector<Segmentation::RegionPro
 
     WriteText(disp_img, std::to_string(proposals.size()));
     DisplayImg(disp_img, window_name);
+}
+
+void showSegmentationsAll(const std::vector<cv::Mat> &img_domains, const std::vector< std::vector<cv::Mat> > &segmentations, const std::vector< Segmentation::RegionProposal > &proposals, const std::string &window_name = "all_segmentations_in_one") {
+    std::vector<cv::Mat> disp;
+
+    for (unsigned int i = 0; i < img_domains.size(); ++i) {
+        disp.push_back(img_domains[i].clone());
+
+        if (disp.back().type() == CV_8UC1)
+            cv::cvtColor(disp.back(), disp.back(), cv::COLOR_GRAY2BGR);
+
+        for (const cv::Mat &seg : segmentations[i])
+            disp.push_back(GetGraphSegmentationViewable(seg));
+    }
+
+    std::vector<unsigned int> regions_cnt(disp.size(), 0);
+    for (const Segmentation::RegionProposal &p : proposals) {
+        unsigned int domain_index = p.domain * (1 + segmentations[0].size());
+        ++regions_cnt[domain_index];
+        unsigned int seg_index = domain_index + p.seg_level + 1;
+        ++regions_cnt[seg_index];
+        DrawBoundingBox(disp[seg_index], p.box, cv::Scalar(0, 0, 0), false, 2);
+    }
+
+    for (unsigned int i = 0; i < regions_cnt.size(); ++i)
+        WriteText(disp[i], std::to_string(regions_cnt[i]));
+
+    unsigned int h = img_domains.size() * img_domains[0].rows;
+    unsigned int w = (1 + segmentations[0].size()) * img_domains[0].cols;
+    DisplayMultipleImages(window_name, disp, img_domains.size(), 1 + segmentations[0].size(), cv::Size(w, h));
 }
 
 int main(int argc, char * argv[]) {
@@ -196,6 +226,7 @@ int main(int argc, char * argv[]) {
             Segmentation::resizeRegions(final_proposals, img.cols, img.rows, img.cols * 200 / img.rows, 200);
             Segmentation::showSegmentationResults(img, final_proposals, final_proposal_scores, "FINAL-Significant regions");
 
+            showSegmentationsAll(img_domains, img_segmentations, img_proposals);
             std::cout << "total number of detected regions: " << img_proposals.size() << std::endl;
         }
 

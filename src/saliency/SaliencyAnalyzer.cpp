@@ -44,6 +44,7 @@ namespace SaliencyFilter {
 
                 //consider removal if smaller is contained by bigger
                 if ((m_regions[i].box & m_regions[j].box).area() >= m_regions[j].box.area() * 0.95) {
+                    //std::cout << "Considering Merge" << std::endl;
                     if (m_regions[j].box_num_pixels > force_merge_threshold * m_regions[i].box_num_pixels)
                         m_regions[i].forceMergeWithSubRegion(m_regions[j]);
                     else
@@ -158,44 +159,6 @@ namespace SaliencyFilter {
             float box_entropy_outer = CalcSpatialEntropy(img_gray, box_outer);
             float box_entropy_around = CalcSpatialEntropy(img_gray, box_outer, r.box);
 
-#if 0
-            cv::Scalar color;
-            cv::Point pos(10, -10), change(0, 40);
-
-            color = cv::Scalar(0, 255, 0);
-            DrawBoundingBox(disp[1], box_inner, color);
-            WriteText(disp[1], std::to_string(box_entropy_inner), 1.0, color, (pos += change));
-
-            color = cv::Scalar(255, 0, 0);
-            DrawBoundingBox(disp[1], r.box, color);
-            WriteText(disp[1], std::to_string(box_entropy), 1.0, color, (pos += change));
-
-            color = cv::Scalar(0, 0, 255);
-            DrawBoundingBox(disp[1], box_outer, color);
-            WriteText(disp[1], std::to_string(box_entropy_outer), 1.0, color, (pos += change));
-
-            color = cv::Scalar(0, 255, 0);
-            WriteText(disp[1], std::to_string(box_entropy_around), 1.0, color, (pos += change));
-
-            color = cv::Scalar(255, 0, 255);
-            float change_box_inner = std::max(box_entropy, box_entropy_inner) / std::min(box_entropy, box_entropy_inner);
-            float change_outer_box = std::max(box_entropy_outer, box_entropy) / std::min(box_entropy_outer, box_entropy);
-            float change_outer_inner = std::max(box_entropy_outer, box_entropy_inner) / std::min(box_entropy_outer, box_entropy_inner);
-            float avg_change = (change_box_inner + change_outer_box + change_outer_inner) / 3;
-            float change_around = std::max(box_entropy_around, box_entropy) / std::min(box_entropy_around, box_entropy);
-            //WriteText(disp[1], std::to_string(change_box_inner), 1.0, color, (pos += change));
-            //WriteText(disp[1], std::to_string(change_outer_box), 1.0, color, (pos += change));
-            //WriteText(disp[1], std::to_string(change_outer_inner), 1.0, color, (pos += change));
-
-            if (avg_change < 1.05 || (avg_change < 1.15 && change_around < 1.7))
-                keep = false;
-
-            color = cv::Scalar(255, 0, 255);
-            WriteText(disp[1], std::to_string(avg_change), 1.0, color, (pos += change));
-            WriteText(disp[1], std::to_string(change_around), 1.0, color, (pos += change));
-            WriteText(disp[1], keep ? "KEEP" : "REJECT", 1.0, color, (pos += change));
-            DisplayMultipleImages("entropy_test", disp, 1, 2, cv::Size(1800, 700), true);
-#else
             float entropy_change_inner_and_box = box_entropy_inner / box_entropy;
             float entropy_change_box_and_outer = box_entropy / box_entropy_outer;
             float entropy_change_inner_and_outer = box_entropy_inner / box_entropy_outer;
@@ -241,8 +204,6 @@ namespace SaliencyFilter {
                 DisplayMultipleImages("entropy_test", disp, 1, 2, cv::Size(1800, 700), true);
             }
 #endif
-
-#endif
             if (!keep)
                 r.status = -6;
         }
@@ -260,10 +221,10 @@ namespace SaliencyFilter {
 
         cv::Scalar saliency_mean, saliency_std;
         cv::meanStdDev(m_saliency_map_equalized, saliency_mean, saliency_std);
-        Region::saliency_map_mean = saliency_mean[0];
-        Region::saliency_map_std = saliency_std[0];
+        //Region::saliency_map_mean = saliency_mean[0];
+        //Region::saliency_map_std = saliency_std[0];
         for (Region &r : m_regions)
-            r = Region(m_saliency_map_unequalized, r.box, r.score);
+            r = Region(m_saliency_map_equalized, r.box, r.score);
     }
 
     void SaliencyAnalyzer::keepBestRegions(unsigned int keep_num) {
@@ -297,7 +258,7 @@ namespace SaliencyFilter {
 
             float total_diffs = std::abs(entropy_change_inner_and_box - entropy_change_box_and_outer) + std::abs(entropy_change_inner_and_box - entropy_change_inner_and_outer) + std::abs(entropy_change_box_and_outer - entropy_change_inner_and_outer);
 
-#if 1
+#if 0
             std::vector<cv::Mat> disp = {m_img.clone(), m_img.clone()};
             DrawBoundingBox(disp[0], m_regions[i].box, cv::Scalar(255, 0, 0));
             WriteText(disp[0], std::to_string(m_regions[i].score), 1.0, cv::Scalar(255, 0, 0), cv::Point(10, 30));
@@ -331,12 +292,13 @@ namespace SaliencyFilter {
 
             color = cv::Scalar(255, 0, 255);
             WriteText(disp[1], std::to_string(total_diffs), 1.0, color, (pos += change));
-            //DisplayMultipleImages("entropy_test", disp, 1, 2, cv::Size(1800, 700), true);
+            DisplayMultipleImages("entropy_test", disp, 1, 2, cv::Size(1800, 700), true);
 #endif
             //region_entropies.push(std::make_pair(-total_diffs, i));
+            region_entropies.push(std::make_pair(total_diffs, i));
             //region_entropies.push(std::make_pair(total_diffs * (2 - m_regions[i].std_change_from_surroundings), i));
             //region_entropies.push(std::make_pair(-std::abs(1 - entropy_change_box_and_outer), i));
-            region_entropies.push(std::make_pair(-m_regions[i].std_change_from_surroundings, i));
+            //region_entropies.push(std::make_pair(-m_regions[i].std_change_from_surroundings, i));
         }
 
         for (unsigned int i = 0; i < remove; ++i) {

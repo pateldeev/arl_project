@@ -10,9 +10,11 @@
 
 cv::Mat GetSubRegionOfMat(const cv::Mat &m, const cv::Rect &r);
 
+void SaveImg(const cv::Mat &img, const std::string &loc);
+
 char DisplayImg(const cv::Mat &img, const std::string &window_name, int width = 1200, int height = 1200, bool wait = false);
 char DisplayImg(const std::string &window_name, const cv::Mat &img, int width = 1200, int height = 1200, bool wait = false);
-void DisplayMultipleImages(const std::string &window_name, const std::vector<cv::Mat> &images, unsigned int rows = 2, unsigned int cols = 5, const cv::Size &display_size = cv::Size(1800, 1000), bool wait = false);
+cv::Mat DisplayMultipleImages(const std::string &window_name, const std::vector<cv::Mat> &images, unsigned int rows = 2, unsigned int cols = 5, const cv::Size &display_size = cv::Size(1800, 1000), bool wait = false);
 char UpdateImg(const cv::Mat &img, const std::string &window_name, const std::string &window_title = "", bool wait = false);
 
 void CreateThresholdImageWindow(const cv::Mat &img, const std::string &window_name_main = "Thresholding");
@@ -32,6 +34,8 @@ void DrawGridLines(cv::Mat &img, int num_grids, const cv::Scalar &grid_color = c
 float CalcSpatialEntropy(const cv::Mat &img, const cv::Rect &region, const cv::Rect &region_blackout);
 float CalcSpatialEntropy(const cv::Mat &img, const cv::Rect &region);
 float CalcSpatialEntropy(const cv::Mat &img);
+
+cv::Scalar GetRandomColor(bool reset_seed = false);
 
 inline void RegionProposalsGraph(const cv::Mat &segmented_img, std::vector<cv::Rect> &regions) {
     regions.clear();

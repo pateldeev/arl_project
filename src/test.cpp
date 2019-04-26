@@ -20,6 +20,9 @@ void run(const cv::Mat &img) {
 
     std::vector<cv::Rect> surviving_regions;
     SaliencyFilter::removeUnsalient(img, segmentation_regions, segmentation_scores, surviving_regions);
+
+    cv::Mat final_results = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "FINAL_PROPOSALS", 2, false);
+    //SaveImg(final_results, "/home/dp/Downloads/poster/Img01/predictions.png");
 }
 
 int main(int argc, char * argv[]) {

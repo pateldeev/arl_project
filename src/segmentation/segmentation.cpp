@@ -33,20 +33,35 @@ namespace Segmentation {
         resizeRegions(proposals, img.cols, img.rows, resize_w, resize_h);
     }
 
-    void showSegmentationResults(const cv::Mat &img, const std::vector<cv::Rect> &proposals, const std::vector<float> &scores, const std::string &window_name, unsigned int box_thickness) {
+    cv::Mat showSegmentationResults(const cv::Mat &img, const std::vector<cv::Rect> &proposals, const std::vector<float> &scores, const std::string &window_name, unsigned int display_outline_thickness, bool show_scores) {
         cv::Mat disp_img = img.clone();
-        int disp_position = 0;
+        //std::srand(std::time(NULL));
+        GetRandomColor(true);
+        if (show_scores) {
+            unsigned int disp_position = 0;
 
-        for (unsigned int i = 0; i < proposals.size(); ++i) {
-            cv::Scalar color(std::rand() % 255, std::rand() % 255, std::rand() % 255);
-            DrawBoundingBox(disp_img, proposals[i], color, false, box_thickness);
-            std::string score("000.000");
-            std::snprintf(const_cast<char*> (score.c_str()), score.size(), "%.3f", scores[i]);
-            score.resize(score.find_first_of('\0'));
-            WriteText(disp_img, score, 0.7, color, cv::Point(2, 20 * (++disp_position)));
+            std::vector<std::pair<float, unsigned int>> regions_by_scores;
+
+            for (unsigned int i = 0; i < proposals.size(); ++i)
+                regions_by_scores.emplace_back(scores[i], i);
+
+            std::sort(regions_by_scores.begin(), regions_by_scores.end(), std::greater<std::pair<float, unsigned int>>());
+
+            for (const std::pair<float, unsigned int> &r : regions_by_scores) {
+                cv::Scalar color = GetRandomColor();
+                DrawBoundingBox(disp_img, proposals[r.second], color, false, display_outline_thickness);
+                std::string score("000.000");
+                std::snprintf(const_cast<char*> (score.c_str()), score.size(), "%.3f", r.first);
+                score.resize(score.find_first_of('\0'));
+                WriteText(disp_img, score, 0.7, color, cv::Point(2, 20 * (++disp_position)));
+            }
+        } else {
+            for (const cv::Rect r : proposals)
+                DrawBoundingBox(disp_img, r, GetRandomColor(), false, display_outline_thickness);
         }
 
         DisplayImg(disp_img, window_name);
+        return disp_img;
     }
 
     void getDomains(const cv::Mat &img, std::vector<cv::Mat> &img_domains, int resize_h) {

@@ -7,10 +7,17 @@ cv::Mat GetSubRegionOfMat(const cv::Mat &m, const cv::Rect &r) {
     return m(cv::Range(r.tl().y, r.br().y + 1), cv::Range(r.tl().x, r.br().x + 1));
 }
 
+void SaveImg(const cv::Mat &img, const std::string &loc) {
+    static const std::vector<int> save_params = {cv::IMWRITE_PNG_COMPRESSION, 0}; //parameters needed to save in lossless png mode
+    //save -- add .png extension if not given
+    cv::imwrite(((loc.find_last_of(".png") == loc.size() - 1) ? loc : loc + ".png"), img, save_params);
+}
+
 char DisplayImg(const cv::Mat &img, const std::string &window_name, int width, int height, bool wait) {
     cv::namedWindow(window_name, cv::WINDOW_NORMAL);
     cv::resizeWindow(window_name, width, height);
     cv::imshow(window_name, img);
+
     return (wait) ? cv::waitKey() : 0;
 }
 
@@ -20,7 +27,7 @@ char DisplayImg(const std::string &window_name, const cv::Mat &img, int width, i
 
 //show multiple CV_8UC1 or CV_8UC3 images in same window - doesn't check number of images provided to make sure it fits
 
-void DisplayMultipleImages(const std::string &window_name, const std::vector<cv::Mat> &images, unsigned int rows, unsigned int cols, const cv::Size &display_size, bool wait) {
+cv::Mat DisplayMultipleImages(const std::string &window_name, const std::vector<cv::Mat> &images, unsigned int rows, unsigned int cols, const cv::Size &display_size, bool wait) {
     cv::Mat img_disp = cv::Mat::zeros(display_size.height, display_size.width, CV_8UC3);
     const int img_target_width = display_size.width / cols, img_target_height = display_size.height / rows; //target size of each small subimage
 
@@ -47,11 +54,13 @@ void DisplayMultipleImages(const std::string &window_name, const std::vector<cv:
         //calculate start position of next image
         w += img_target_width;
         if (w >= display_size.width - img_target_width + 1) { //go to next row if needed
+
             w = 0;
             h += img_target_height;
         }
     }
     DisplayImg(img_disp, window_name, display_size.width, display_size.height, wait);
+    return img_disp;
 }
 
 char UpdateImg(const cv::Mat &img, const std::string &window_name, const std::string &window_title, bool wait) {
@@ -118,7 +127,6 @@ void ShowHistrogram(const cv::Mat &img, const std::string &window_name) {
 
     for (unsigned int i = 0; i < 255; ++i) // normalize the histogram between 0 and hist_img.rows
         histogram[i] = u_int((double(histogram[i]) / max) * hist_img.rows);
-
 
     for (unsigned int i = 0; i < 255; ++i) // draw the intensity line for histogram
         cv::line(hist_img, cv::Point(bin_w * i, hist_size.height), cv::Point(bin_w * i, hist_size.height - histogram[i]), cv::Scalar(0, 0, 0), 1, 8, 0);
@@ -253,6 +261,7 @@ float CalcSpatialEntropy(const cv::Mat &img, const cv::Rect &region, const cv::R
     CV_Assert(region.height < img.rows && region.width < img.cols);
     cv::Mat img_sub = img(region).clone();
     img_sub(region_blackout - region.tl()).setTo(0);
+
     return CalcSpatialEntropy(img_sub);
 }
 
@@ -314,4 +323,23 @@ float CalcSpatialEntropy(const cv::Mat &img) {
 
     //Compute Entropy
     return std::abs(-1.0 * probabilty.dot(log_filtered)); //-p*log(p) //abs to make -0 to 0
+}
+
+cv::Scalar GetRandomColor(bool reset_seed) {
+    static unsigned int seed = 0;
+    if (reset_seed)
+        seed = 0;
+    else
+        ++seed;
+
+    if (seed == 0)
+        return cv::Scalar(0, 0, 0);
+    else if (seed == 1)
+        return cv::Scalar(0, 0, 255);
+    else if (seed == 2)
+        return cv::Scalar(255, 0, 0);
+    else if (seed == 3)
+        return cv::Scalar(0, 255, 0);
+    else
+        return cv::Scalar(55 + std::rand() % 200, 55 + std::rand() % 200, 55 + std::rand() % 200);
 }
