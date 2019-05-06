@@ -20,6 +20,7 @@ namespace Segmentation {
     void mergeProposalsBetweenSegmentationLevels(std::vector<RegionProposal> &proposals, float min_score = 1.f, float IOU_thresh = 0.95, float IU_diff_percentage = 0.005);
     void mergeProposalsCommonThroughoutDomain(std::vector<RegionProposal> &proposals, float IOU_thresh = 0.95, float IU_diff_percentage = 0.0075, unsigned int num_segmentations_levels = 5);
     void getSignificantMergedRegions(const std::vector<RegionProposal> &proposals, std::vector<cv::Rect> &signficiant_regions, std::vector<float> &sigificant_region_scores);
+    void resizeRegion(cv::Rect &region, int original_w, int original_h, int resize_w, int resize_h);
     void resizeRegions(std::vector<cv::Rect> &regions, int original_w, int original_h, int resize_w, int resize_h);
 
     struct RegionProposal {

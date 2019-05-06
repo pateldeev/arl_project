@@ -147,7 +147,7 @@ cv::Mat YoloInterface::getPredictionsDisplayable(const cv::Mat &img, const std::
     GetRandomColor(true);
     for (const std::pair<cv::Rect, std::pair<float, std::string>> &r : predictions) {
         static int i = 0;
-        if (++i == 1)
+        if (++i <= 0)
             continue;
         cv::Scalar color = GetRandomColor();
         std::string text = r.second.second + "(" + std::to_string(r.second.first) + ")";

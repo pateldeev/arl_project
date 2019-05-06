@@ -190,7 +190,7 @@ int main(int argc, char * argv[]) {
         } else {
             sprintf(file_name, file_name_format, file_current);
             img = cv::imread(file_name);
-
+            img = cv::imread("/home/dp/Downloads/poster/Img10/img.png");
             img_proposals.clear();
 
             t1 = std::chrono::high_resolution_clock::now();

@@ -53,10 +53,15 @@ namespace SaliencyFilter {
 #if 0
                     if (m_regions[i].status == -3 || m_regions[j].status == -3) {
                         cv::Mat disp = m_img.clone();
-                        DrawBoundingBox(disp, m_regions[i].box, cv::Scalar(0, 0, 255));
-                        DrawBoundingBox(disp, m_regions[j].box, cv::Scalar(255, 0, 0));
+                        cv::Mat disp2 = m_img.clone();
+                        DrawBoundingBox(disp, m_regions[i].box, cv::Scalar(0, 0, 255), false, 3);
+                        DrawBoundingBox(disp, m_regions[j].box, cv::Scalar(255, 0, 0), false, 3);
+                        DrawBoundingBox(disp2, m_regions[j].status == -3 ? m_regions[i].box : m_regions[j].box, cv::Scalar(0, 255, 0), false, 3);
                         DisplayImg(disp, "MERGED");
-                        cv::waitKey();
+                        if (cv::waitKey() == 's') {
+                            SaveImg(disp(m_regions[j].box_double), "/home/dp/Downloads/poster/saliency/merge_candidates.png");
+                            SaveImg(disp2(m_regions[j].status == -3 ? m_regions[i].box_double : m_regions[j].box_double), "/home/dp/Downloads/poster/saliency/merge_outcome.png");
+                        }
                     }
 #endif
                     if (m_regions[i].status == -3)
@@ -74,10 +79,33 @@ namespace SaliencyFilter {
 
 #if 0
             if (r.status != 1) {
-                cv::Mat disp = m_img.clone();
-                DrawBoundingBox(disp, r.box, cv::Scalar(0, 0, 255));
-                DisplayImg(disp, "Region Removed");
-                cv::waitKey();
+                std::vector<cv::Mat> disp;
+                disp.push_back(m_img.clone());
+                disp.push_back(m_saliency_map_unequalized.clone());
+                cv::normalize(disp.back(), disp.back(), 0, 255, cv::NORM_MINMAX, CV_8UC1);
+                cv::cvtColor(disp.back(), disp.back(), cv::COLOR_GRAY2BGR);
+                DrawBoundingBox(disp[0], r.box, cv::Scalar(0, 0, 255), false, 3);
+                DrawBoundingBox(disp[1], r.box, cv::Scalar(0, 0, 255), false, 3);
+                disp.push_back(disp[0](r.box_double).clone());
+                disp.push_back(disp[1](r.box_double).clone());
+
+                DisplayMultipleImages("Region Removed", disp, 1, disp.size());
+                if (cv::waitKey() == 's')
+                    SaveImg(disp[3], "/home/dp/Downloads/poster/saliency/rejected.png");
+            } else {
+                std::vector<cv::Mat> disp;
+                disp.push_back(m_img.clone());
+                disp.push_back(m_saliency_map_unequalized.clone());
+                cv::normalize(disp.back(), disp.back(), 0, 255, cv::NORM_MINMAX, CV_8UC1);
+                cv::cvtColor(disp.back(), disp.back(), cv::COLOR_GRAY2BGR);
+                DrawBoundingBox(disp[0], r.box, cv::Scalar(0, 255, 0), false, 3);
+                DrawBoundingBox(disp[1], r.box, cv::Scalar(0, 255, 0), false, 3);
+                disp.push_back(disp[0](r.box_double).clone());
+                disp.push_back(disp[1](r.box_double).clone());
+
+                DisplayMultipleImages("Region Accepted", disp, 1, disp.size());
+                if (cv::waitKey() == 's')
+                    SaveImg(disp[3], "/home/dp/Downloads/poster/saliency/accepted.png");
             }
 #endif
         }
@@ -115,7 +143,7 @@ namespace SaliencyFilter {
                         WriteText(disp[0], std::to_string(m_regions[i].score), 1.0, cv::Scalar(255, 0, 0), cv::Point(10, 30));
                         DrawBoundingBox(disp[0], m_regions[j].box, cv::Scalar(0, 255, 0));
                         WriteText(disp[0], std::to_string(m_regions[j].score), 1.0, cv::Scalar(0, 255, 0), cv::Point(10, 70));
-#endif
+#endif                       
                         m_regions[i] = Region::computeReconciledRegion(m_regions[i], m_regions[j], m_saliency_map_equalized, m_saliency_map_unequalized, m_img);
                         m_regions[j].status = -5;
 #if 0
@@ -212,11 +240,18 @@ namespace SaliencyFilter {
 
     void SaliencyAnalyzer::computeDescriptorsAndResizeRegions(void) {
         for (Region &r : m_regions) {
-#if 1
-            cv::Mat disp = m_img.clone();
-            DrawBoundingBox(disp, r.box, cv::Scalar(0, 255, 0));
+#if 0
+            static int x = -1;
+            if (++x == 1 || x == 5 || x == 7)
+                continue;
+            //if (x == 3)
+
+            cv::Mat sal;
+            cv::saliency::StaticSaliencySpectralResidual::create()->computeSaliency(m_img, sal);
+            r.computeDescriptorsAndResize(sal, m_img);
+#else
+            r.computeDescriptorsAndResize(m_saliency_map_equalized, m_img);
 #endif
-            r.computeDescriptorsAndResize(m_saliency_map_equalized, disp);
         }
 
         cv::Scalar saliency_mean, saliency_std;
@@ -294,18 +329,22 @@ namespace SaliencyFilter {
             WriteText(disp[1], std::to_string(total_diffs), 1.0, color, (pos += change));
             DisplayMultipleImages("entropy_test", disp, 1, 2, cv::Size(1800, 700), true);
 #endif
-            //region_entropies.push(std::make_pair(-total_diffs, i));
             region_entropies.push(std::make_pair(total_diffs, i));
-            //region_entropies.push(std::make_pair(total_diffs * (2 - m_regions[i].std_change_from_surroundings), i));
-            //region_entropies.push(std::make_pair(-std::abs(1 - entropy_change_box_and_outer), i));
-            //region_entropies.push(std::make_pair(-m_regions[i].std_change_from_surroundings, i));
+            //region_entropies.push(std::make_pair(-total_diffs, i)); //for 02, 09, 10
         }
 
+#if 0
+        for (unsigned int i = 0; i < m_regions.size(); ++i) {
+            if (i == 1 || i == 2 || i == 5)
+                continue;
+            m_regions[i].status = -7;
+        }
+#else
         for (unsigned int i = 0; i < remove; ++i) {
             m_regions[region_entropies.top().second].status = -7;
             region_entropies.pop();
         }
-
+#endif
         Region::removeInvalidRegions(m_regions);
     }
 

@@ -84,6 +84,10 @@ namespace SaliencyFilter {
     }
 
     void SaliencyAnalyzer::Region::computeDescriptorsAndResize(const cv::Mat &saliency_map, const cv::Mat &img) {
+        cv::Mat disp_img = img.clone();
+        DrawBoundingBox(disp_img, box, cv::Scalar(0, 255, 0));
+
+
         RECT_SIDES edges_order[4];
         int optimal_changes[4];
 
@@ -98,13 +102,21 @@ namespace SaliencyFilter {
             edges_order[2] = RECT_SIDES::LEFT;
             edges_order[3] = RECT_SIDES::RIGHT;
         }
+#define DISPLAY_DESCRIPTORS 0
+#if DISPLAY_DESCRIPTORS
+        std::vector<cv::Mat> disp = {img.clone()};
+        //cv::normalize(disp.back(), disp.back(), 0, 255, cv::NORM_MINMAX, CV_8UC1);
+        //cv::cvtColor(disp.back(), disp.back(), cv::COLOR_GRAY2BGR);
+        DrawBoundingBox(disp.back(), box, cv::Scalar(0, 0, 255), false, 3);
+        disp.push_back(disp.back()(box_double));
+#endif
 
         for (unsigned int i = 0; i < 2; ++i) { //move in one axis first
             computeDescriptorAlongEdge(edges_order[i], saliency_map);
-#if 0
+#if DISPLAY_DESCRIPTORS
             std::cout << std::endl << "Calling visualization on " << edges_order[i] << " :" << avg_sal << " | " << std_sal << " | Surrounding | " << avg_sal_double << " | " << std_sal_double << std::endl;
-            edges[edges_order[i]].visualizeDescriptor(img);
-            CV_Assert(cv::waitKey() != 'q');
+            edges[edges_order[i]].visualizeDescriptor(disp_img);
+            //CV_Assert(cv::waitKey() != 'q');
 #endif
             optimal_changes[edges_order[i]] = edges[edges_order[i]].computeOptimalChange();
 
@@ -113,10 +125,10 @@ namespace SaliencyFilter {
 
         for (unsigned int i = 2; i < 4; ++i) {//move in other axis
             computeDescriptorAlongEdge(edges_order[i], saliency_map);
-#if 0
+#if DISPLAY_DESCRIPTORS
             std::cout << std::endl << "Calling visualization |" << avg_sal << "|" << std_sal << "| Surrounding |" << avg_sal_double << "|" << std_sal_double << std::endl;
-            edges[edges_order[i]].visualizeDescriptor(img);
-            CV_Assert(cv::waitKey() != 'q');
+            edges[edges_order[i]].visualizeDescriptor(disp_img);
+            //CV_Assert(cv::waitKey() != 'q');
 #endif 
             optimal_changes[edges_order[i]] = edges[edges_order[i]].computeOptimalChange();
 
@@ -124,12 +136,16 @@ namespace SaliencyFilter {
 
         }
 
-
-#if 0
-        cv::Mat disp = img.clone();
-        DrawBoundingBox(disp, box, cv::Scalar(0, 0, 255));
-        DisplayImg(disp, "CHANGED");
-        CV_Assert(cv::waitKey() != 'q');
+#if DISPLAY_DESCRIPTORS   
+        disp.push_back(img.clone());
+        DrawBoundingBox(disp.back(), box, cv::Scalar(0, 255, 0), false, 3);
+        disp.push_back(disp.back()(box_double));
+        DisplayMultipleImages("CHANGED", disp, 1, disp.size());
+        //CV_Assert(cv::waitKey() != 'q');
+        if (cv::waitKey() == 's') {
+            SaveImg(disp[1], "/home/dp/Downloads/poster/saliency/resize_before.png");
+            SaveImg(disp[3], "/home/dp/Downloads/poster/saliency/resize_after.png");
+        }
 #endif
     }
 

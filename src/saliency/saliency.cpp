@@ -10,7 +10,7 @@
 namespace SaliencyFilter {
 
     void displayDebugInfo(const cv::Mat &img, const std::vector<cv::Rect> &segmentation_regions, const std::vector<float> &segmentation_scores) {
-        cv::Mat img_saliency = computeSaliencyMap(img);
+        cv::Mat img_saliency = computeSaliencyMap(img, false);
 
         std::vector<float> avg_saliency;
         for (const cv::Rect &r : segmentation_regions)
@@ -63,34 +63,46 @@ namespace SaliencyFilter {
 
         saliency_analyzer.tryMergingSubRegions();
 
-#if 0
-        cv::Mat sal_map = computeSaliencyMap(img);
-        ShowHistrogram(sal_map);
-        CreateThresholdImageWindow(sal_map);
-        cv::waitKey();
-        return;
+#define SAVE_FOR_POSTER 0
+#if SAVE_FOR_POSTER
+        saliency_analyzer.getRegionsSurviving(surviving_regions);
+        cv::Mat m1 = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "1", 3, false);
 #endif
+
         saliency_analyzer.ensureSaliencyOfRegions();
 
+#if SAVE_FOR_POSTER
+        saliency_analyzer.getRegionsSurviving(surviving_regions);
+        cv::Mat m2 = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "2", 3, false);
+#endif 
+
+        //saliency_analyzer.reconcileOverlappingRegions()
         while (saliency_analyzer.reconcileOverlappingRegions());
 
-        saliency_analyzer.ensureDistinguishabilityOfRegions();
+        //saliency_analyzer.ensureDistinguishabilityOfRegions();
 
+#if SAVE_FOR_POSTER
+        saliency_analyzer.getRegionsSurviving(surviving_regions);
+        cv::Mat m3 = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "3", 3, false);
+#endif
+
+        std::vector<cv::Mat> resize_disp(2);
         if (display_debug) {
             saliency_analyzer.getRegionsSurviving(surviving_regions);
-            Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "segmentations_to_resize");
+            resize_disp[0] = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "segmentations_to_resize");
         }
-        //CreateThresholdImageWindow(computeSaliencyMap(img));
-        //return;
 
         saliency_analyzer.computeDescriptorsAndResizeRegions();
 
-        //saliency_analyzer.ensureRegionSaliencyFromSurroundings();
-
         if (display_debug) {
             saliency_analyzer.getRegionsSurviving(surviving_regions);
-            Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "resized_segmentations");
+            resize_disp[1] = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "resized_segmentations");
         }
+
+#if SAVE_FOR_POSTER
+        saliency_analyzer.getRegionsSurviving(surviving_regions);
+        cv::Mat m4 = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "4", 3, false);
+#endif
 
         saliency_analyzer.tryMergingSubRegions(0.3);
         saliency_analyzer.reconcileOverlappingRegions(0.3);
@@ -100,11 +112,23 @@ namespace SaliencyFilter {
             Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "before_final_removal");
         }
 
-        saliency_analyzer.keepBestRegions();
+#if SAVE_FOR_POSTER
+        saliency_analyzer.getRegionsSurviving(surviving_regions);
+        cv::Mat m5 = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "4", 3, false);
+        SaveImg(m1, "/home/dp/Downloads/poster/saliency/saliency_1.png");
+        SaveImg(m2, "/home/dp/Downloads/poster/saliency/saliency_2.png");
+        SaveImg(m3, "/home/dp/Downloads/poster/saliency/saliency_3.png");
+        SaveImg(m4, "/home/dp/Downloads/poster/saliency/saliency_4.png");
+        SaveImg(m5, "/home/dp/Downloads/poster/saliency/saliency_5.png");
+#endif
+
+        //saliency_analyzer.keepBestRegions();
 
         saliency_analyzer.getRegionsSurviving(surviving_regions);
-        if (display_debug)
+        if (display_debug) {
             Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "FINAL_REGIONS", 2);
+            DisplayMultipleImages("Resizing Results", resize_disp, 1, 2);
+        }
     }
 
     void calculateMeanSTD(const std::vector<float> &data, float &mean, float &stdeviation) {

@@ -12,8 +12,13 @@ int main(int argc, char* argv[]) {
 #if 0
     const char file_name_format[] = "/home/dp/Downloads/data_mine/%d.png";
     char file_name[100];
-    int file_count = 3;
+    int file_current = 3;
     const int file_count_max = 20;
+#elif 1
+    const char file_name_format[] = "/home/dp/Downloads/data_new/%d.png";
+    char file_name[100];
+    int file_current = 0;
+    const int file_count_max = 10;
 #else 
     const char file_name_format[] = "/home/dp/Downloads/data_walkthrough/%d.png";
     char file_name[100];
@@ -37,16 +42,18 @@ int main(int argc, char* argv[]) {
 
         sprintf(file_name, file_name_format, file_current);
         img = cv::imread(file_name);
+        img = cv::imread("/home/dp/Downloads/poster/Img11/img.png");
         CV_Assert(!img.empty());
-        yolo.setThresholds(0.1);
 
         Segmentation::process(img, regions, scores);
 
         SaliencyFilter::removeUnsalient(img, regions, scores, regions, false);
 
+        yolo.setThresholds(0.001);
         cv::Mat img_yolo_results = YoloInterface::getPredictionsDisplayable(img, yolo.processImage(img));
         DisplayImg(img_yolo_results, "yolo_predictions");
-        //SaveImg(img_yolo_results, "/home/dp/Downloads/poster/Img01/yolo");
+        SaveImg(img_yolo_results, "/home/dp/Downloads/poster/Img11/yolo.png");
+        yolo.saveResults("/home/dp/Downloads/poster/Img11/yolo_results.txt");
 
         Segmentation::showSegmentationResults(img, regions, scores, "my_proposals", 2);
 

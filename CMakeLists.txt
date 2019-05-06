@@ -66,7 +66,7 @@ ADD_EXECUTABLE(yolo_comparison "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloComp
 ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 
 ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2})
-ADD_EXECUTABLE(poster "${PROJECT_SOURCE_DIR}/src/main.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2} ${SRC_YOLO} )
+ADD_EXECUTABLE(poster "${PROJECT_SOURCE_DIR}/src/poster.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2} ${SRC_YOLO} )
 #ADD_EXECUTABLE(test_saliency_merging "${PROJECT_SOURCE_DIR}/src/testSaliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 
 #ADD_EXECUTABLE(vocus2_test "${PROJECT_SOURCE_DIR}/src/vocus2/main.cpp" ${SRC_HELPER} ${SRC_VOCUS2})

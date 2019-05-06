@@ -327,19 +327,23 @@ float CalcSpatialEntropy(const cv::Mat &img) {
 
 cv::Scalar GetRandomColor(bool reset_seed) {
     static unsigned int seed = 0;
-    if (reset_seed)
+    if (reset_seed) {
         seed = 0;
-    else
+        std::srand(std::time(NULL));
+    } else {
         ++seed;
+    }
 
     if (seed == 0)
         return cv::Scalar(0, 0, 0);
     else if (seed == 1)
-        return cv::Scalar(0, 0, 255);
-    else if (seed == 2)
-        return cv::Scalar(255, 0, 0);
-    else if (seed == 3)
         return cv::Scalar(0, 255, 0);
+    else if (seed == 2)
+        return cv::Scalar(255, 200, 0); //cv::Scalar(255, 0, 0);
+    else if (seed == 3)
+        return cv::Scalar(0, 0, 255);
+    else if (seed == 4)
+        return cv::Scalar(255, 0, 200);
     else
         return cv::Scalar(55 + std::rand() % 200, 55 + std::rand() % 200, 55 + std::rand() % 200);
 }

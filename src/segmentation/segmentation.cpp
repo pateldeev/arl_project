@@ -378,17 +378,17 @@ namespace Segmentation {
         }
     }
 
-    void resizeRegions(std::vector<cv::Rect> &regions, int original_w, int original_h, int resize_w, int resize_h) {
-        //rescale rectangles
-        int x, y, w, h;
-        for (cv::Rect &r : regions) {
-            x = original_w * (double(r.x) / resize_w);
-            y = original_h * (double(r.y) / resize_h);
-            w = original_w * (double(r.width) / resize_w);
-            h = original_h * (double(r.height) / resize_h);
+    void resizeRegion(cv::Rect &region, int original_w, int original_h, int resize_w, int resize_h) {
+        int x = original_w * (double(region.x) / resize_w);
+        int y = original_h * (double(region.y) / resize_h);
+        int w = original_w * (double(region.width) / resize_w);
+        int h = original_h * (double(region.height) / resize_h);
+        region = cv::Rect(x, y, w, h);
+    }
 
-            r = cv::Rect(x, y, w, h);
-        }
+    void resizeRegions(std::vector<cv::Rect> &regions, int original_w, int original_h, int resize_w, int resize_h) {
+        for (cv::Rect &r : regions)
+            resizeRegion(r, original_w, original_h, resize_w, resize_h);
     }
 
     //helper function for mergeProposalsCommonThroughoutDomain

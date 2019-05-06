@@ -19,10 +19,10 @@ void run(const cv::Mat &img) {
     std::cout << std::endl << "Segmentation Time: " << duration / 1000 << "s" << std::endl;
 
     std::vector<cv::Rect> surviving_regions;
-    SaliencyFilter::removeUnsalient(img, segmentation_regions, segmentation_scores, surviving_regions);
+    SaliencyFilter::removeUnsalient(img, segmentation_regions, segmentation_scores, surviving_regions, true);
 
-    cv::Mat final_results = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "FINAL_PROPOSALS", 2, false);
-    //SaveImg(final_results, "/home/dp/Downloads/poster/Img01/predictions.png");
+    cv::Mat final_results = Segmentation::showSegmentationResults(img, surviving_regions, segmentation_scores, "FINAL_PROPOSALS", 3, false);
+    //SaveImg(final_results, "/home/dp/Downloads/poster/saliency/original_segs");
 }
 
 int main(int argc, char * argv[]) {
@@ -44,12 +44,14 @@ int main(int argc, char * argv[]) {
         strcpy(file_name_format, "/home/dp/Downloads/data_mine/%d.png");
         file_current = 4;
         file_max = 20;
-
     } else if (data_set == '3') {
         strcpy(file_name_format, "/home/dp/Downloads/data_cumulative/%d.png");
         file_max = 17;
     } else if (data_set == '4') {
         strcpy(file_name_format, "/home/dp/Downloads/test/%d.jpg");
+        file_max = 10;
+    } else if (data_set == '5') {
+        strcpy(file_name_format, "/home/dp/Downloads/data_new/%d.png");
         file_max = 10;
     } else {
         strcpy(file_name_format, "/home/dp/Downloads/data_representative/%d.png");
@@ -62,12 +64,14 @@ int main(int argc, char * argv[]) {
     int key = 0;
     do {
         if (key == 'n')
-            ++file_current %= (file_max + 1);
+            ++file_current %= (file_max);
         else if (key == 'b' && --file_current < 0)
             file_current = file_max;
 
         sprintf(file_name, file_name_format, file_current);
         img = cv::imread(file_name);
+        img = cv::imread("/home/dp/Downloads/poster/Img07/img.png");
+        //img = cv::imread("/home/dp/Downloads/data_mine/8.png");
         CV_Assert(!img.empty());
 
         run(img);
