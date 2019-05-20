@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-#define DEBUG_SEGMENTATION
+//#define DEBUG_SEGMENTATION
 
 namespace SegmentationCV {
 

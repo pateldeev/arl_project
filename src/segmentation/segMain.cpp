@@ -150,16 +150,17 @@ int main(int argc, char * argv[]) {
     if (argc > 1)
         data_set = argv[1][0];
 
+    const std::string file_base = "/home/dp/Downloads/project/";
     if (data_set == '1') {
-        strcpy(file_name_format, "/home/dp/Downloads/data_walkthrough/%d.png");
+        strcpy(file_name_format, (file_base + "data_walkthrough/%d.png").c_str());
         file_current = 10;
         file_max = 36;
     } else if (data_set == '2') {
-        strcpy(file_name_format, "/home/dp/Downloads/data_mine/%d.png");
+        strcpy(file_name_format, (file_base + "data_mine/%d.png").c_str());
         file_current = 4;
         file_max = 20;
     } else {
-        strcpy(file_name_format, "/home/dp/Downloads/data_cumulative/%d.png");
+        strcpy(file_name_format, (file_base + "data_cumulative/%d.png").c_str());
         file_max = 17;
     }
 
@@ -190,7 +191,7 @@ int main(int argc, char * argv[]) {
         } else {
             sprintf(file_name, file_name_format, file_current);
             img = cv::imread(file_name);
-            img = cv::imread("/home/dp/Downloads/poster/Img10/img.png");
+            //img = cv::imread("/home/dp/Downloads/poster/Img10/img.png");
             img_proposals.clear();
 
             t1 = std::chrono::high_resolution_clock::now();

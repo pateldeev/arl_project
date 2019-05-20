@@ -127,7 +127,7 @@ int main(int argc, char * argv[]) {
     cv::Mat img;
     std::srand(std::time(0));
 
-    const char file_name_format[] = "/home/dp/Downloads/ARL_data/%d.png";
+    const char file_name_format[] = "/home/dp/Downloads/project/ARL_data/%d.png";
     char file_name[100];
     int file_count = 19;
     const int file_count_max = 30;

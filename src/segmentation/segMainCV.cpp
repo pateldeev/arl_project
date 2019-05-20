@@ -7,9 +7,9 @@
 int main(int argc, char * argv[]) {
     //const cv::Mat img = cv::imread("/home/dp/Desktop/trainSet/Stimuli/Indoor/001.jpg");
     //const cv::Mat img = cv::imread("/home/dp/Desktop/ARL/darknet-master/networkInput.jpg");
-    const cv::Mat img = cv::imread("/home/dp/Downloads/20181108_190017_HDR.jpg");
+    //const cv::Mat img = cv::imread("/home/dp/Downloads/20181108_190017_HDR.jpg");
     //const cv::Mat img = cv::imread("/home/dp/Downloads/IMG_0834.jpeg");
-    //const cv::Mat img = cv::imread("/home/dp/Desktop/Screenshot 2019-02-07 19:15:42.png");
+    const cv::Mat img = cv::imread("/home/dp/Downloads/project/ARL_data/15.png");
 #if 1
     std::vector<cv::Rect> proposals;
 

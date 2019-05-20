@@ -17,8 +17,7 @@ int main(int argc, char* argv[]) {
     VOCUS2 vocus2(cfg);
     const std::string window_name = "VOCUS2 Saliency Map";
 
-    cv::Mat img = cv::imread("/home/dp/Downloads/data_cumulative/0.png");
-
+    const cv::Mat img = cv::imread("/home/dp/Downloads/project/data_cumulative/0.png");
 
     vocus2.process(img);
     cv::Mat sal_map = vocus2.get_salmap();

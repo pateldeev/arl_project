@@ -39,7 +39,7 @@ TARGET_LINK_LIBRARIES(DARKNET_LIBRARY INTERFACE pthread ${OpenMP_C_FLAGS} ${CUDA
 ADD_DEPENDENCIES(DARKNET_LIBRARY DARKNET_BUILD)
 SET(DARKNET_LIBS DARKNET_LIBRARY)
 
-##source files
+#source files
 SET(SRC_HELPER "${PROJECT_SOURCE_DIR}/src/functions.cpp")
 SET(SRC_SEGMENTATION "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
 SET(SRC_SEGMENTATION_CV "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
@@ -53,23 +53,23 @@ SET(SRC_YOLO "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" ${SRC_H
 #ADD_EXECUTABLE(old_filteredRegions "${PROJECT_SOURCE_DIR}/src/old/filteredRegions.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp")
 #ADD_EXECUTABLE(old_contours "${PROJECT_SOURCE_DIR}/src/old/contours.cpp")
 
-#ADD_EXECUTABLE(yolo_visualization "${PROJECT_SOURCE_DIR}/src/yoloInterface/visualization.cpp")
-#ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" ${SRC_HELPER} ${SRC_YOLO})
+ADD_EXECUTABLE(yolo_visualization "${PROJECT_SOURCE_DIR}/src/yoloInterface/visualization.cpp" ${SRC_HELPER})
+ADD_EXECUTABLE(yolo "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloMain.cpp" ${SRC_HELPER} ${SRC_YOLO})
 ADD_EXECUTABLE(yolo_comparison "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloComparator.cpp" ${SRC_HELPER} ${SRC_YOLO} ${SRC_SEGMENTATION}  ${SRC_SALIENCY} ${SRC_VOCUS2})
 
-#ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/webCam.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
-#ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_HELPER} ${SRC_SALIENCY})
-#ADD_EXECUTABLE(fly_capture_camera_detailed "${PROJECT_SOURCE_DIR}/src/flyCameraDetailed.cpp" "${PROJECT_SOURCE_DIR}/src/yoloInterface/yoloInterface.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
-#ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/video.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
+ADD_EXECUTABLE(webcam "${PROJECT_SOURCE_DIR}/src/webCam.cpp" ${SRC_HELPER} ${SRC_YOLO} ${SRC_SEGMENTATION_CV})
+ADD_EXECUTABLE(fly_capture_camera "${PROJECT_SOURCE_DIR}/src/flyCamera.cpp" ${SRC_HELPER} ${SRC_YOLO} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2})
+ADD_EXECUTABLE(fly_capture_camera_detailed "${PROJECT_SOURCE_DIR}/src/flyCameraDetailed.cpp" ${SRC_HELPER} ${SRC_YOLO} ${SRC_SEGMENTATION} ${SRC_VOCUS2})
+ADD_EXECUTABLE(video "${PROJECT_SOURCE_DIR}/src/video.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 
-#ADD_EXECUTABLE(cv_segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMainCV.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentationCV.cpp")
+ADD_EXECUTABLE(cv_segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMainCV.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION_CV})
 ADD_EXECUTABLE(segmentation "${PROJECT_SOURCE_DIR}/src/segmentation/segMain.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 
 ADD_EXECUTABLE(test_area "${PROJECT_SOURCE_DIR}/src/test.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2})
-ADD_EXECUTABLE(poster "${PROJECT_SOURCE_DIR}/src/poster.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2} ${SRC_YOLO} )
-#ADD_EXECUTABLE(test_saliency_merging "${PROJECT_SOURCE_DIR}/src/testSaliency.cpp" "${PROJECT_SOURCE_DIR}/src/functions.cpp" "${PROJECT_SOURCE_DIR}/src/segmentation/segmentation.cpp")
+ADD_EXECUTABLE(poster "${PROJECT_SOURCE_DIR}/src/poster.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION} ${SRC_SALIENCY} ${SRC_VOCUS2} ${SRC_YOLO})
+#ADD_EXECUTABLE(test_saliency_merging "${PROJECT_SOURCE_DIR}/src/testSaliency.cpp" ${SRC_HELPER} ${SRC_SEGMENTATION})
 
-#ADD_EXECUTABLE(vocus2_test "${PROJECT_SOURCE_DIR}/src/vocus2/main.cpp" ${SRC_HELPER} ${SRC_VOCUS2})
+ADD_EXECUTABLE(vocus2_test "${PROJECT_SOURCE_DIR}/src/vocus2/main.cpp" ${SRC_HELPER} ${SRC_VOCUS2})
 
 
 #link executables to libraries
@@ -78,20 +78,20 @@ ADD_EXECUTABLE(poster "${PROJECT_SOURCE_DIR}/src/poster.cpp" ${SRC_HELPER} ${SRC
 #TARGET_LINK_LIBRARIES(old_filteredRegions ${OpenCV_LIBS})
 #TARGET_LINK_LIBRARIES(old_contours ${OpenCV_LIBS})
 
-#TARGET_LINK_LIBRARIES(yolo_visualization ${OpenCV_LIBS})
-#TARGET_LINK_LIBRARIES(yolo ${OpenCV_LIBS} ${DARKNET_LIBS})
+TARGET_LINK_LIBRARIES(yolo_visualization ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(yolo ${OpenCV_LIBS} ${DARKNET_LIBS})
 TARGET_LINK_LIBRARIES(yolo_comparison ${OpenCV_LIBS} ${DARKNET_LIBS} ${Boost_LIBRARIES})
 
-#TARGET_LINK_LIBRARIES(webcam ${OpenCV_LIBS} ${DARKNET_LIBS})
-#TARGET_LINK_LIBRARIES(fly_capture_camera ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
-#TARGET_LINK_LIBRARIES(fly_capture_camera_detailed ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS})
-#TARGET_LINK_LIBRARIES(video ${OpenCV_LIBS} ${DARKNET_LIBS})
+TARGET_LINK_LIBRARIES(webcam ${OpenCV_LIBS} ${DARKNET_LIBS})
+TARGET_LINK_LIBRARIES(fly_capture_camera ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(fly_capture_camera_detailed ${OpenCV_LIBS} ${FlyCapture2_LIBS} ${DARKNET_LIBS} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(video ${OpenCV_LIBS} ${DARKNET_LIBS})
 
-#TARGET_LINK_LIBRARIES(cv_segmentation ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(cv_segmentation ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(segmentation ${OpenCV_LIBS})
 
 TARGET_LINK_LIBRARIES(test_area ${OpenCV_LIBS} ${Boost_LIBRARIES})
 TARGET_LINK_LIBRARIES(poster ${OpenCV_LIBS} ${DARKNET_LIBS} ${Boost_LIBRARIES})
 #TARGET_LINK_LIBRARIES(test_saliency_merging ${OpenCV_LIBS})
 
-#TARGET_LINK_LIBRARIES(vocus2_test ${OpenCV_LIBS} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(vocus2_test ${OpenCV_LIBS} ${Boost_LIBRARIES})

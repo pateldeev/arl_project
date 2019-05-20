@@ -52,7 +52,6 @@ int main(int argc, char * argv[]) {
     const std::vector<int> save_params = {cv::IMWRITE_PNG_COMPRESSION, 0};
 
     //for performing segmentation
-    const std::vector<float> k_values = {500, 600, 700, 800, 900};
     int disp_domain = 0;
     std::vector<cv::Mat> img_domains;
     std::vector< std::vector<cv::Mat> > img_segmentations;
@@ -137,7 +136,7 @@ int main(int argc, char * argv[]) {
         if (run_segmentation) { // Run segmentation
             t1 = std::chrono::high_resolution_clock::now();
             Segmentation::getDomains(img_captured, img_domains);
-            Segmentation::getSegmentations(img_domains, img_segmentations, k_values);
+            Segmentation::getSegmentations(img_domains, img_segmentations);
             t2 = std::chrono::high_resolution_clock::now();
 
             duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
